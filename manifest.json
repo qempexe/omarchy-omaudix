@@ -1,0 +1,300 @@
+{
+  "schemaVersion": 1,
+  "id": "io.github.qempexe.omaudix",
+  "name": "Omaudix: Media Visualizer",
+  "version": "1.0.0",
+  "author": "qempexe",
+  "license": "MIT",
+  "description": "Now-playing bar widget with eight live visualizers (cava or built-in), left/right placement, and fixed-width scrolling track text.",
+  "kinds": [
+    "service",
+    "bar-widget"
+  ],
+  "keepLoaded": true,
+  "entryPoints": {
+    "service": "Service.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Omaudix",
+    "description": "Visualizer, scrolling artist - title and playback controls",
+    "category": "Media",
+    "aliases": ["visualizer", "cava", "wavebar", "music", "player"],
+    "allowMultiple": false,
+    "defaultSection": "left",
+    "defaults": {
+      "vizStyle": "bars",
+      "vizSide": "left",
+      "vizWidth": 72,
+      "barCount": 20,
+      "colorMode": "theme",
+      "customColor": "#7aa2f7",
+      "sensitivity": 100,
+      "smoothing": 60,
+      "fps": 30,
+      "engine": "auto",
+      "player": "auto",
+      "showText": true,
+      "compactText": true,
+      "textFormat": "artist-title",
+      "separator": " - ",
+      "textWidth": 160,
+      "scrollDirection": "left",
+      "scrollSpeed": 35,
+      "scrollPause": 1500,
+      "textAlign": "left",
+      "showControls": true,
+      "controlsSide": "right",
+      "hideWhenPaused": false,
+      "clickAction": "playPause",
+      "wheelAction": "track",
+      "showAlbumArt": true,
+      "pauseOthers": false,
+      "coverSide": "hidden",
+      "coverSize": 16
+    },
+    "schema": [
+      {
+        "key": "vizStyle",
+        "type": "enum",
+        "label": "Visualizer style",
+        "options": ["bars", "mirror", "wave", "scope", "dots", "led", "ring", "area"],
+        "defaultValue": "bars",
+        "description": "bars, mirror, wave (smooth blob), scope (real oscilloscope), dots, led (segmented meter), ring (radial) or area (filled mountain)."
+      },
+      {
+        "key": "vizSide",
+        "type": "enum",
+        "label": "Visualizer position",
+        "options": ["left", "right", "both", "hidden"],
+        "defaultValue": "left",
+        "description": "Which side of the text the visualizer sits on. 'both' mirrors it on each side."
+      },
+      {
+        "key": "vizWidth",
+        "type": "integer",
+        "label": "Visualizer width",
+        "min": 24,
+        "max": 240,
+        "step": 4,
+        "defaultValue": 72,
+        "description": "How wide the visualizer is. The ring style stays square."
+      },
+      {
+        "key": "barCount",
+        "type": "integer",
+        "label": "Bar count",
+        "min": 6,
+        "max": 64,
+        "step": 2,
+        "defaultValue": 20,
+        "description": "Number of frequency bands for the spectrum styles."
+      },
+      {
+        "key": "colorMode",
+        "type": "enum",
+        "label": "Color mode",
+        "options": ["theme", "fade", "rainbow", "custom"],
+        "defaultValue": "theme",
+        "description": "theme follows the bar foreground; fade ramps its opacity; rainbow shifts hue; custom uses the color below."
+      },
+      {
+        "key": "customColor",
+        "type": "string",
+        "label": "Custom color",
+        "defaultValue": "#7aa2f7",
+        "description": "Hex color like #7aa2f7 (used when Color mode is custom)."
+      },
+      {
+        "key": "sensitivity",
+        "type": "integer",
+        "label": "Sensitivity",
+        "min": 25,
+        "max": 400,
+        "step": 5,
+        "defaultValue": 100,
+        "description": "Extra gain applied after the engine's own auto-leveling."
+      },
+      {
+        "key": "smoothing",
+        "type": "integer",
+        "label": "Smoothing",
+        "min": 0,
+        "max": 100,
+        "step": 5,
+        "defaultValue": 60,
+        "description": "Higher values make bars fall more slowly."
+      },
+      {
+        "key": "fps",
+        "type": "integer",
+        "label": "Frame rate",
+        "min": 15,
+        "max": 60,
+        "step": 5,
+        "defaultValue": 30,
+        "description": "Visualizer updates per second. Lower saves CPU."
+      },
+      {
+        "key": "engine",
+        "type": "enum",
+        "label": "Spectrum engine",
+        "options": ["auto", "cava", "builtin"],
+        "defaultValue": "auto",
+        "description": "auto uses cava when installed and falls back to the built-in FFT. The scope style always uses its own capture."
+      },
+      {
+        "key": "player",
+        "type": "string",
+        "label": "Player",
+        "defaultValue": "auto",
+        "description": "Which media player to follow: auto (whatever is playing) or a player's D-Bus name. Easiest to change from the Player tab in the widget's settings panel."
+      },
+      {
+        "key": "showText",
+        "type": "boolean",
+        "label": "Show track text",
+        "defaultValue": true,
+        "description": "Show the artist and title next to the visualizer."
+      },
+      {
+        "key": "compactText",
+        "type": "boolean",
+        "label": "Shrink to short titles",
+        "defaultValue": true,
+        "description": "Titles that fit are shown at their own width, so the buttons sit right next to them. Off keeps the text area at a fixed width."
+      },
+      {
+        "key": "textFormat",
+        "type": "enum",
+        "label": "Text format",
+        "options": ["artist-title", "title-artist", "title", "artist"],
+        "defaultValue": "artist-title",
+        "description": "What the text shows and in which order."
+      },
+      {
+        "key": "separator",
+        "type": "string",
+        "label": "Separator",
+        "defaultValue": " - ",
+        "description": "Placed between artist and title."
+      },
+      {
+        "key": "textWidth",
+        "type": "integer",
+        "label": "Max text width",
+        "min": 60,
+        "max": 400,
+        "step": 10,
+        "defaultValue": 160,
+        "description": "Widest the text area can get. Longer titles scroll instead of growing the widget."
+      },
+      {
+        "key": "scrollDirection",
+        "type": "enum",
+        "label": "Scroll direction",
+        "options": ["left", "right", "bounce", "off"],
+        "defaultValue": "left",
+        "description": "How text that does not fit moves: left, right, bounce back and forth, or off (truncate)."
+      },
+      {
+        "key": "scrollSpeed",
+        "type": "integer",
+        "label": "Scroll speed",
+        "min": 10,
+        "max": 120,
+        "step": 5,
+        "defaultValue": 35,
+        "description": "How fast overflowing text moves."
+      },
+      {
+        "key": "scrollPause",
+        "type": "integer",
+        "label": "Scroll pause",
+        "min": 0,
+        "max": 5000,
+        "step": 250,
+        "defaultValue": 1500,
+        "description": "How long the text waits (in milliseconds) before each scroll so the start can be read."
+      },
+      {
+        "key": "textAlign",
+        "type": "enum",
+        "label": "Text alignment",
+        "options": ["left", "center", "right"],
+        "defaultValue": "left",
+        "description": "Alignment of text that fits without scrolling."
+      },
+      {
+        "key": "showControls",
+        "type": "boolean",
+        "label": "Show playback controls",
+        "defaultValue": true,
+        "description": "Previous, play/pause and next buttons."
+      },
+      {
+        "key": "controlsSide",
+        "type": "enum",
+        "label": "Controls position",
+        "options": ["left", "right"],
+        "defaultValue": "right",
+        "description": "Which end of the widget holds the buttons."
+      },
+      {
+        "key": "hideWhenPaused",
+        "type": "boolean",
+        "label": "Hide when paused",
+        "defaultValue": false,
+        "description": "Remove the widget from the bar while nothing is playing. Off by default so the widget is always visible."
+      },
+      {
+        "key": "pauseOthers",
+        "type": "boolean",
+        "label": "Pause the old player when a new one starts",
+        "defaultValue": false,
+        "description": "When another player starts playing (from outside Omaudix), pause whatever else was playing. Off by default."
+      },
+      {
+        "key": "coverSide",
+        "type": "enum",
+        "label": "Cover art on the bar",
+        "options": ["hidden", "left", "center", "right"],
+        "defaultValue": "hidden",
+        "description": "Show the song's cover (a note icon when there is none) on the bar. left: before everything, center: right before the text, right: after everything."
+      },
+      {
+        "key": "coverSize",
+        "type": "integer",
+        "label": "Cover size",
+        "min": 10,
+        "max": 36,
+        "step": 2,
+        "defaultValue": 16,
+        "description": "Size of the cover on the bar."
+      },
+      {
+        "key": "clickAction",
+        "type": "enum",
+        "label": "Click action",
+        "options": ["playPause", "next", "none"],
+        "defaultValue": "playPause",
+        "description": "Left click on the visualizer or text. Middle click always skips to the next track."
+      },
+      {
+        "key": "wheelAction",
+        "type": "enum",
+        "label": "Scroll wheel action",
+        "options": ["track", "style", "none"],
+        "defaultValue": "track",
+        "description": "track skips songs; style cycles the visualizer style until the shell restarts."
+      },
+      {
+        "key": "showAlbumArt",
+        "type": "boolean",
+        "label": "Show album art",
+        "defaultValue": true,
+        "description": "Display the current track's cover art in the settings popup header."
+      }
+    ]
+  }
+}
