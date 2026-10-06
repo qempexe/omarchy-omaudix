@@ -373,6 +373,7 @@ PopupWindow {
                                 asynchronous: true
                             }
                             Text {
+                                textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                                 anchors.centerIn: parent
                                 text: "\u266B"
                                 color: root.fg
@@ -388,6 +389,7 @@ PopupWindow {
                             spacing: 2
 
                             Text {
+                                textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                                 Layout.fillWidth: true
                                 text: root.title !== "" ? root.title : "Nothing playing"
                                 color: root.fg
@@ -397,6 +399,7 @@ PopupWindow {
                                 elide: Text.ElideRight
                             }
                             Text {
+                                textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                                 Layout.fillWidth: true
                                 text: root.title !== "" ? root.artist
                                     : "Preview uses sample data until music plays"
@@ -420,6 +423,7 @@ PopupWindow {
                             Behavior on color { ColorAnimation { duration: 100 } }
 
                             Text {
+                                textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                                 id: resetLabel
                                 anchors.centerIn: parent
                                 text: root.confirmReset ? "Really reset?" : "Reset all"
@@ -440,6 +444,7 @@ PopupWindow {
                             implicitWidth: 24; implicitHeight: 24; radius: 6
                             color: closeArea.containsMouse ? root.tint(0.16) : root.tint(0.08)
                             Text {
+                                textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                                 anchors.centerIn: parent
                                 text: "\u00D7"
                                 color: root.fg
@@ -504,6 +509,7 @@ PopupWindow {
                             Layout.fillHeight: true
 
                             Text {
+                                textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                                 anchors.centerIn: parent
                                 anchors.verticalCenterOffset: -1
                                 text: modelData.title
@@ -573,6 +579,7 @@ PopupWindow {
                             spacing: 6
 
                             Text {
+                                textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                                 Layout.fillWidth: true
                                 text: "Follow which player?"
                                 color: root.fg
@@ -581,6 +588,7 @@ PopupWindow {
                                 font.weight: Font.DemiBold
                             }
                             Text {
+                                textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                                 Layout.fillWidth: true
                                 Layout.bottomMargin: 4
                                 text: "Pick one to pause the others and play it. Auto just follows whatever is playing."
@@ -639,6 +647,7 @@ PopupWindow {
                                             Layout.fillWidth: true
                                             spacing: 6
                                             Text {
+                                                textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                                                 text: modelData.name
                                                 color: root.fg
                                                 font.family: root.fontFamily
@@ -649,6 +658,7 @@ PopupWindow {
                                                 Layout.maximumWidth: Math.max(40, rowText.width - viaText.implicitWidth - 8)
                                             }
                                             Text {
+                                                textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                                                 id: viaText
                                                 visible: modelData.via !== ""
                                                 text: "via " + modelData.via
@@ -660,6 +670,7 @@ PopupWindow {
                                             Item { Layout.fillWidth: true }
                                         }
                                         Text {
+                                            textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                                             Layout.fillWidth: true
                                             text: modelData.sub
                                             color: root.fg
@@ -671,6 +682,7 @@ PopupWindow {
                                     }
 
                                     Text {
+                                        textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                                         id: stateText
                                         anchors.right: parent.right
                                         anchors.rightMargin: 10
@@ -694,6 +706,7 @@ PopupWindow {
                             }
 
                             Text {
+                                textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                                 Layout.fillWidth: true
                                 visible: root.players.length === 0
                                 text: "No players found. Start Spotify, YouTube Music, cliamp, a radio app, or play something in a browser and it will show up here."
@@ -704,6 +717,7 @@ PopupWindow {
                                 wrapMode: Text.Wrap
                             }
                             Text {
+                                textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                                 Layout.fillWidth: true
                                 Layout.topMargin: 4
                                 text: "The visualizer listens to your system output, so it reacts to whatever is audible, not only the selected player."
@@ -775,6 +789,7 @@ PopupWindow {
                     radius: 4
                     color: root.tint(0.08)
                     Text {
+                        textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                         id: escLabel
                         anchors.centerIn: parent
                         text: "Esc"
@@ -785,6 +800,7 @@ PopupWindow {
                     }
                 }
                 Text {
+                    textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                     text: "close"
                     color: root.fg
                     opacity: 0.45
@@ -793,6 +809,7 @@ PopupWindow {
                 }
                 Item { Layout.fillWidth: true }
                 Text {
+                    textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                     text: "Changes apply instantly"
                     color: root.fg
                     opacity: 0.45

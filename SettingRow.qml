@@ -82,6 +82,7 @@ Item {
             ? Qt.rgba(ink.r, ink.g, ink.b, 0.18)
             : Qt.rgba(ink.r, ink.g, ink.b, 0.08)
         Text {
+            textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
             anchors.centerIn: parent
             text: btn.glyph
             color: btn.ink
@@ -114,6 +115,7 @@ Item {
                 spacing: 2
 
                 Text {
+                    textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                     Layout.fillWidth: true
                     text: root.label
                     color: root.fg
@@ -123,6 +125,7 @@ Item {
                     elide: Text.ElideRight
                 }
                 Text {
+                    textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                     Layout.fillWidth: true
                     text: root.hint
                     visible: root.hint !== ""
@@ -142,6 +145,7 @@ Item {
 
                 IconButton { glyph: "\u2212"; ink: root.fg; onClicked: root.nudge(-1) }
                 Text {
+                    textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                     Layout.preferredWidth: 34
                     horizontalAlignment: Text.AlignHCenter
                     text: root.show(root.value)
@@ -214,6 +218,7 @@ Item {
                         Behavior on color { ColorAnimation { duration: 100 } }
 
                         Text {
+                            textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                             anchors.centerIn: parent
                             width: parent.width - 8
                             horizontalAlignment: Text.AlignHCenter
@@ -251,6 +256,7 @@ Item {
                     radius: 6
                     color: on ? root.fg : root.tint(0.07)
                     Text {
+                        textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                         id: chipText
                         anchors.centerIn: parent
                         text: root.labelFor(modelData)
@@ -303,6 +309,7 @@ Item {
                         count: 10
                     }
                     Text {
+                        textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                         anchors.horizontalCenter: parent.horizontalCenter
                         anchors.bottom: parent.bottom
                         anchors.bottomMargin: 7
@@ -389,12 +396,14 @@ Item {
             RowLayout {
                 Layout.fillWidth: true
                 Text {
+                    textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                     text: root.show(root.min)
                     color: root.fg; opacity: 0.4
                     font.family: root.fontFamily; font.pixelSize: 8
                 }
                 Item { Layout.fillWidth: true }
                 Text {
+                    textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                     text: root.show(root.max)
                     color: root.fg; opacity: 0.4
                     font.family: root.fontFamily; font.pixelSize: 8
@@ -451,6 +460,7 @@ Item {
                         radius: 6
                         color: on ? root.fg : (pArea.containsMouse ? root.tint(0.14) : root.tint(0.07))
                         Text {
+                            textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                             anchors.centerIn: parent
                             text: String(modelData).trim() === "" ? "\u2423" : String(modelData).trim()
                             color: parent.on ? root.bg : root.fg

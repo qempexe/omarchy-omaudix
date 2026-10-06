@@ -62,6 +62,23 @@ class ManifestTests(unittest.TestCase):
         style = next(s for s in self.bw["schema"] if s["key"] == "vizStyle")
         self.assertEqual(opts, style["options"])
 
+    def test_every_text_item_is_plain_text(self):
+        """MPRIS metadata is attacker-controlled: Text.AutoText would render
+        <img src=...> and fetch remote URLs. Every Text item must pin PlainText."""
+        for name in sorted(f for f in os.listdir(ROOT) if f.endswith(".qml")):
+            lines = read(name).split("\n")
+            for i, line in enumerate(lines):
+                if not re.match(r"^\s*(?:[\w.]+:\s*)?Text \{\s*$", line):
+                    continue
+                depth, block = 0, []
+                for l in lines[i:]:
+                    depth += l.count("{") - l.count("}")
+                    block.append(l)
+                    if depth <= 0:
+                        break
+                self.assertTrue(any("textFormat: Text.PlainText" in b for b in block),
+                                "%s:%d Text without textFormat: Text.PlainText" % (name, i + 1))
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -26,6 +26,7 @@ Rectangle {
     }
 
     Text {
+        textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
         anchors.centerIn: parent
         visible: root.source === ""
         text: "♫"

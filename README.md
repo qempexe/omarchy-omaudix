@@ -147,7 +147,7 @@ python3 tests/test_manifest.py   # manifest vs. QML settings drift
 
 ## Status
 
-Version 1.0.0. The helper and the manifest checks are covered by the tests above, and
+Version 1.0.1. The helper and the manifest checks are covered by the tests above, and
 `Visualizer.qml` and `MarqueeText.qml` were rendered and exercised in an offscreen Qt
 runtime. The glue that talks to the real Omarchy shell (media service, bar API, `omarchy`
 CLI commands in the scripts) was written from public plugin examples and has not been run
