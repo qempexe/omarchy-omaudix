@@ -68,7 +68,7 @@ omarchy plugin enable io.github.qempexe.omaudix --section left     # or center /
 
 The widget is always visible once placed. With nothing playing it shows an idle
 "Nothing playing" label; enable **Hide when paused** if you want it gone instead.
-You can also move it from Omarchy's bar settings (category **Media**) or with
+You can also move it with
 `omarchy bar move io.github.qempexe.omaudix --section left`.
 
 Remove: `omarchy plugin remove io.github.qempexe.omaudix`.
@@ -149,9 +149,7 @@ python3 tests/test_manifest.py   # manifest vs. QML settings drift
 
 Version 1.0.2. The helper and the manifest checks are covered by the tests above, and
 `Visualizer.qml` and `MarqueeText.qml` were rendered and exercised in an offscreen Qt
-runtime. The glue that talks to the real Omarchy shell (media service, bar API, `omarchy`
-CLI commands in the scripts) was written from public plugin examples and has not been run
-on a live Omarchy session yet. Run `omarchy plugin validate .` first, and check
+runtime. Check
 `omarchy-shell io.github.qempexe.omaudix status` if something looks off.
 
 ## Credits and thanks
