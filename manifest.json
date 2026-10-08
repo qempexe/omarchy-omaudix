@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "id": "io.github.qempexe.omaudix",
   "name": "Omaudix",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "author": "qempexe",
   "license": "MIT",
-  "description": "Now-playing bar widget with eight live visualizers (cava or built-in), left/right placement, and fixed-width scrolling track text.",
+  "description": "Now-playing bar widget with eight live visualizers (cava or built-in), left/right placement, fixed-width scrolling track text, and a settings panel that can follow your theme.",
   "kinds": [
     "service",
     "bar-widget"
@@ -29,6 +29,8 @@
       "barCount": 20,
       "colorMode": "theme",
       "customColor": "#7aa2f7",
+      "panelColor": "theme",
+      "panelCustomColor": "#7aa2f7",
       "sensitivity": 100,
       "smoothing": 60,
       "fps": 30,
@@ -104,6 +106,21 @@
         "label": "Custom color",
         "defaultValue": "#7aa2f7",
         "description": "Hex color like #7aa2f7 (used when Color mode is custom)."
+      },
+      {
+        "key": "panelColor",
+        "type": "enum",
+        "label": "Settings panel colors",
+        "options": ["theme", "custom", "monochrome"],
+        "defaultValue": "theme",
+        "description": "Colors of the settings panel itself: theme brings your Omarchy theme's accent and background into it, custom uses the accent below, monochrome keeps it neutral grey."
+      },
+      {
+        "key": "panelCustomColor",
+        "type": "string",
+        "label": "Panel accent color",
+        "defaultValue": "#7aa2f7",
+        "description": "Hex color like #7aa2f7 (used when Settings panel colors is custom)."
       },
       {
         "key": "sensitivity",

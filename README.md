@@ -14,6 +14,9 @@ A now-playing widget for the Omarchy bar: live visualizer, fixed-width scrolling
 - **8 visualizer styles**: `bars`, `mirror`, `wave` (smooth blob), `scope` (real
   oscilloscope), `dots`, `led` (segmented meter), `ring` (radial), `area` (filled mountain).
 - **4 color modes**: follow the bar theme, fade, rainbow, or your own hex color.
+- **Settings panel colors**: the settings panel itself can `theme` (bring your Omarchy theme's
+  accent and background into the panel), use a `custom` accent hex, or stay `monochrome` (neutral grey).
+  Text always follows the bar foreground. If the shell exposes no theme accent, `theme` looks like `monochrome`.
 - **Position**: visualizer on the `left`, `right`, `both` sides (mirrored) or `hidden`.
   Controls can sit on either end too.
 - **Capped-width text**: titles that fit are shown at their own width (buttons sit right next to
@@ -87,6 +90,8 @@ All of these appear in Omarchy's widget settings UI.
 | `barCount` | 6-64 | 20 |
 | `colorMode` | theme, fade, rainbow, custom | theme |
 | `customColor` | hex like `#7aa2f7` | #7aa2f7 |
+| `panelColor` | theme, custom, monochrome (colors of the settings panel) | theme |
+| `panelCustomColor` | hex like `#7aa2f7` (used when `panelColor` is custom) | #7aa2f7 |
 | `sensitivity` | 25-400 % | 100 |
 | `smoothing` | 0-100 | 60 |
 | `fps` | 15-60 | 30 |
@@ -109,6 +114,7 @@ All of these appear in Omarchy's widget settings UI.
 | `coverSize` | 10-36 px | 16 |
 | `clickAction` | playPause, next, none | playPause |
 | `wheelAction` | track, style, none | track |
+| `showAlbumArt` | true / false (cover in the settings panel header) | true |
 
 Inline form in `~/.config/omarchy/shell.json`:
 
@@ -132,6 +138,7 @@ omarchy-shell io.github.qempexe.omaudix playPause | next | previous
 Service.qml  -- reads the active MPRIS player (Quickshell.Services.Mpris), owns ONE helper process
   viz.py     -- cava (or built-in FFT over pw-record) / oscilloscope -> one text frame per line
 BarWidget.qml -- layout, settings, clicks; Controls.qml, Visualizer.qml, MarqueeText.qml
+SettingsPopup.qml / SettingRow.qml / SettingsStore.qml -- the settings panel and its saved overrides
 ```
 
 The visualizer reacts to your **system output** (default sink monitor), not to one specific
@@ -145,12 +152,6 @@ python3 tests/test_viz.py        # helper: FFT bands, scope, pacing, fake pw-rec
 python3 tests/test_manifest.py   # manifest vs. QML settings drift
 ```
 
-## Status
-
-Version 1.0.2. The helper and the manifest checks are covered by the tests above, and
-`Visualizer.qml` and `MarqueeText.qml` were rendered and exercised in an offscreen Qt
-runtime. Check
-`omarchy-shell io.github.qempexe.omaudix status` if something looks off.
 
 ## Credits and thanks
 

@@ -30,6 +30,8 @@ BarWidget {
     readonly property int barCount: whole(over("barCount", setting("barCount", 20)), 6, 64, 20)
     readonly property string colorMode: pick(over("colorMode", setting("colorMode", "theme")), ["theme", "fade", "rainbow", "custom"], "theme")
     readonly property string customColor: String(over("customColor", setting("customColor", "#7aa2f7")))
+    readonly property string panelColor: pick(over("panelColor", setting("panelColor", "theme")), ["theme", "custom", "monochrome"], "theme")
+    readonly property string panelCustomColor: String(over("panelCustomColor", setting("panelCustomColor", "#7aa2f7")))
     readonly property int sensitivity: whole(over("sensitivity", setting("sensitivity", 100)), 25, 400, 100)
     readonly property int smoothing: whole(over("smoothing", setting("smoothing", 60)), 0, 100, 60)
     readonly property int fps: whole(over("fps", setting("fps", 30)), 15, 60, 30)
@@ -400,6 +402,8 @@ BarWidget {
         anchorItem: root
         fg: root.fg
         fontFamily: root.fontName
+        panelMode: root.panelColor
+        panelAccent: root.panelCustomColor
         albumArt: root.albumArt
         title: root.service ? root.service.title : ""
         artist: root.service ? root.service.artist : ""

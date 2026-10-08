@@ -7,13 +7,14 @@ import QtQuick.Layouts
 //   kind  enum    segmented control (<= 4 options) or wrapping chips
 //         viz     tile picker, each tile draws the real visualizer style
 //         colors  tile picker, each tile draws the real color mode
+//         scheme  tile picker for the panel's own colors (theme / custom / mono)
 //         int     slider with - / + nudge buttons and a "default" notch
 //         bool    switch
 //         string  text field (+ optional preset chips)
 //         color   swatch palette + hex field
 //
-// Everything is derived from `fg` (the bar foreground) so it follows the
-// Omarchy theme. Numbers are shown plain: no px / ms / % suffixes.
+// Text and soft tints come from `fg`; selected / filled parts use `accent`
+// (the theme accent, a custom color, or `fg` in monochrome). Numbers are shown plain: no px / ms / % suffixes.
 Item {
     id: root
 
@@ -32,7 +33,15 @@ Item {
     property int decimals: 0
     property bool dimmed: false        // setting currently has no effect
     property color fg: "white"
-    property color bg: "black"         // opaque popup background, for text on filled chips
+    property color accent: fg          // selected / filled parts
+    property color bg: "black"         // text drawn on top of an accent fill
+    property color panel: "black"      // opaque popup background
+    property color barFg: fg           // bar foreground, for the visualizer tiles
+    property color schemeAccent: "#7aa2f7"   // swatches for the scheme tiles
+    property color schemeBg: "#1a1b26"
+    property color schemeCustom: "#7aa2f7"
+    property color schemeNeutral: "#121216"  // monochrome / custom panel background
+    property color schemeMono: "#f2f2f4"     // monochrome ink
     property string fontFamily: ""
     property color customColor: "#7aa2f7"
     property var demoSpectrum: []
@@ -42,6 +51,7 @@ Item {
 
     // ---- helpers -----------------------------------------------------------
     function tint(a) { return Qt.rgba(fg.r, fg.g, fg.b, a) }
+    function accentTint(a) { return Qt.rgba(accent.r, accent.g, accent.b, a) }
     function str(v) { return (v === null || v === undefined) ? "" : String(v) }
     function same(a, b) { return str(a) === str(b) }
     function labelFor(opt) { return labels[opt] !== undefined ? labels[opt] : String(opt) }
@@ -164,7 +174,7 @@ Item {
                 implicitWidth: 40
                 implicitHeight: 22
                 radius: 11
-                color: root.boolValue ? root.fg : root.tint(0.14)
+                color: root.boolValue ? root.accent : root.tint(0.14)
                 Behavior on color { ColorAnimation { duration: 120 } }
 
                 Rectangle {
@@ -214,7 +224,7 @@ Item {
                         Layout.preferredWidth: 1
                         Layout.fillHeight: true
                         radius: 6
-                        color: on ? root.fg : (seg.containsMouse ? root.tint(0.10) : "transparent")
+                        color: on ? root.accent : (seg.containsMouse ? root.tint(0.10) : "transparent")
                         Behavior on color { ColorAnimation { duration: 100 } }
 
                         Text {
@@ -254,7 +264,7 @@ Item {
                     implicitWidth: chipText.implicitWidth + 20
                     implicitHeight: 26
                     radius: 6
-                    color: on ? root.fg : root.tint(0.07)
+                    color: on ? root.accent : root.tint(0.07)
                     Text {
                         textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                         id: chipText
@@ -275,27 +285,28 @@ Item {
 
         // ---- viz / colors: tiles that draw the real thing --------------------
         GridLayout {
-            visible: root.kind === "viz" || root.kind === "colors"
+            visible: root.kind === "viz" || root.kind === "colors" || root.kind === "scheme"
             Layout.fillWidth: true
-            columns: 4
+            columns: root.kind === "scheme" ? 3 : 4
             columnSpacing: 8
             rowSpacing: 8
 
             Repeater {
-                model: (root.kind === "viz" || root.kind === "colors") ? root.options : []
+                model: (root.kind === "viz" || root.kind === "colors" || root.kind === "scheme") ? root.options : []
                 delegate: Rectangle {
                     id: tile
                     readonly property bool on: root.same(root.value, modelData)
                     readonly property bool isRing: root.kind === "viz" && modelData === "ring"
-                    Layout.preferredWidth: Math.floor((root.width - 24) / 4)
-                    Layout.preferredHeight: 54
+                    Layout.preferredWidth: Math.floor((root.width - (root.kind === "scheme" ? 16 : 24)) / (root.kind === "scheme" ? 3 : 4))
+                    Layout.preferredHeight: root.kind === "scheme" ? 62 : 54
                     radius: 8
-                    color: on ? root.tint(0.16) : (tileArea.containsMouse ? root.tint(0.10) : root.tint(0.05))
+                    color: on ? root.accentTint(0.16) : (tileArea.containsMouse ? root.tint(0.10) : root.tint(0.05))
                     border.width: on ? 1.5 : 1
-                    border.color: on ? root.fg : root.tint(0.10)
+                    border.color: on ? root.accent : root.tint(0.10)
                     Behavior on color { ColorAnimation { duration: 100 } }
 
                     Visualizer {
+                        visible: root.kind !== "scheme"
                         anchors.horizontalCenter: parent.horizontalCenter
                         y: 9
                         width: tile.isRing ? 24 : parent.width - 24
@@ -305,8 +316,38 @@ Item {
                         vizStyle: root.kind === "viz" ? modelData : "bars"
                         colorMode: root.kind === "colors" ? modelData : "theme"
                         customColor: root.customColor
-                        foreground: root.fg
+                        foreground: root.barFg
                         count: 10
+                    }
+
+                    // scheme tile: a miniature panel drawn in that scheme
+                    Rectangle {
+                        visible: root.kind === "scheme"
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        y: 8
+                        width: parent.width - 20
+                        height: 30
+                        radius: 5
+                        color: modelData === "theme" ? root.schemeBg
+                             : root.schemeNeutral
+                        border.width: 1
+                        border.color: root.tint(0.14)
+                        readonly property color swatch: modelData === "theme" ? root.schemeAccent
+                            : (modelData === "custom" ? root.schemeCustom
+                               : root.schemeMono)
+
+                        Rectangle {   // fake selected segment
+                            x: 6; y: 6; width: 16; height: 7; radius: 3
+                            color: parent.swatch
+                        }
+                        Rectangle {   // fake slider track + fill
+                            x: 6; y: 18; width: parent.width - 12; height: 4; radius: 2
+                            color: Qt.rgba(root.schemeMono.r, root.schemeMono.g, root.schemeMono.b, 0.18)
+                            Rectangle {
+                                width: parent.width * 0.55; height: parent.height; radius: 2
+                                color: parent.parent.swatch
+                            }
+                        }
                     }
                     Text {
                         textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
@@ -355,7 +396,7 @@ Item {
                         width: handle.x + handle.width / 2
                         height: parent.height
                         radius: parent.radius
-                        color: root.tint(0.85)
+                        color: root.accent
                     }
                 }
                 // small notch marking where the default sits
@@ -371,9 +412,9 @@ Item {
                     width: slider.knob; height: slider.knob; radius: slider.knob / 2
                     x: (slider.width - width) * root.frac
                     anchors.verticalCenter: parent.verticalCenter
-                    color: root.fg
+                    color: root.accent
                     border.width: 3
-                    border.color: root.bg
+                    border.color: root.panel
                 }
 
                 MouseArea {
@@ -424,7 +465,7 @@ Item {
                 radius: 6
                 color: root.tint(0.06)
                 border.width: 1
-                border.color: textIn.activeFocus ? root.tint(0.7) : root.tint(0.12)
+                border.color: textIn.activeFocus ? root.accent : root.tint(0.12)
 
                 TextInput {
                     id: textIn
@@ -458,7 +499,7 @@ Item {
                         implicitWidth: 28
                         implicitHeight: 28
                         radius: 6
-                        color: on ? root.fg : (pArea.containsMouse ? root.tint(0.14) : root.tint(0.07))
+                        color: on ? root.accent : (pArea.containsMouse ? root.tint(0.14) : root.tint(0.07))
                         Text {
                             textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                             anchors.centerIn: parent
@@ -527,7 +568,7 @@ Item {
                     radius: 6
                     color: root.tint(0.06)
                     border.width: 1
-                    border.color: hexIn.activeFocus ? root.tint(0.7) : root.tint(0.12)
+                    border.color: hexIn.activeFocus ? root.accent : root.tint(0.12)
 
                     TextInput {
                         id: hexIn

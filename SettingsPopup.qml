@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import qs.Commons
 
 // Floating settings panel for Omaudix.
 //
@@ -10,7 +11,9 @@ import Quickshell
 //   * Every setting is a SettingRow: plain numbers (no px/ms/%), friendly
 //     option names, a one-line hint, and a reset arrow once it differs from
 //     the default. Settings that currently have no effect are dimmed.
-//   * Colors are derived from the bar foreground, so it follows the theme.
+//   * Colors: the "Settings panel colors" setting picks the scheme. Follow theme
+//     uses the Omarchy theme's accent and background, Custom uses a hex accent,
+//     Monochrome is neutral grey. Text always follows the bar foreground.
 PopupWindow {
     id: root
 
@@ -18,6 +21,8 @@ PopupWindow {
     property var anchorItem: null
     property color fg: "white"
     property string fontFamily: ""
+    property string panelMode: "theme"            // theme | custom | monochrome
+    property string panelAccent: "#7aa2f7"        // used by custom
     property var readSetting: null
     property string albumArt: ""
     property string title: ""
@@ -36,11 +41,55 @@ PopupWindow {
     property int tab: 0
     property bool confirmReset: false
 
-    // ---- theme -------------------------------------------------------------
-    readonly property bool lightText: (0.299 * fg.r + 0.587 * fg.g + 0.114 * fg.b) > 0.5
-    readonly property color panelBg: lightText ? Qt.rgba(0.07, 0.07, 0.09, 0.97) : Qt.rgba(0.97, 0.97, 0.98, 0.97)
-    readonly property color inkOnFg: lightText ? Qt.rgba(0.07, 0.07, 0.09, 1) : Qt.rgba(0.97, 0.97, 0.98, 1)
-    function tint(a) { return Qt.rgba(fg.r, fg.g, fg.b, a) }
+    // ---- colors --------------------------------------------------------------
+    // Look up a color the shell's theme may expose, trying several likely names.
+    // Missing names just return undefined, so an unknown theme falls back to the
+    // bar foreground instead of breaking.
+    function themeColor(names) {
+        for (var i = 0; i < names.length; i++) {
+            var raw
+            try { raw = Color[names[i]] } catch (e) { raw = undefined }
+            if (raw === undefined || raw === null) continue
+            try {
+                var c = Qt.color(raw)
+                if (c && c.valid !== false) return c
+            } catch (e2) { }
+        }
+        return null
+    }
+    function hexColor(text) {
+        var t = String(text)
+        return /^#([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(t) ? Qt.color(t) : null
+    }
+    function luma(c) { return 0.299 * c.r + 0.587 * c.g + 0.114 * c.b }
+
+    readonly property bool lightText: luma(fg) > 0.5
+    readonly property var themeAccentColor: themeColor(["accent", "primary", "highlight", "accentColor", "color4", "blue"])
+    readonly property var themeBgColor: themeColor(["background", "surface", "base", "bg"])
+    readonly property var customAccentColor: hexColor(panelAccent)
+
+    readonly property bool useTheme: panelMode === "theme"
+    readonly property bool useCustom: panelMode === "custom"
+
+    // Neutral panel, used by monochrome and custom (and by theme when the shell
+    // exposes no background).
+    readonly property color neutralBg: lightText ? Qt.rgba(0.07, 0.07, 0.09, 0.97) : Qt.rgba(0.97, 0.97, 0.98, 0.97)
+    readonly property color neutralInk: lightText ? Qt.rgba(0.95, 0.95, 0.96, 1) : Qt.rgba(0.10, 0.10, 0.12, 1)
+
+    // ink: text and soft tints.  accent: filled / selected parts.
+    readonly property color ink: useTheme ? fg : (useCustom ? fg : neutralInk)
+    readonly property color accent: {
+        if (useTheme && themeAccentColor) return themeAccentColor
+        if (useCustom && customAccentColor) return customAccentColor
+        return ink
+    }
+    readonly property color panelBg: (useTheme && themeBgColor)
+        ? Qt.rgba(themeBgColor.r, themeBgColor.g, themeBgColor.b, 0.97) : neutralBg
+    // Text on top of an accent fill.
+    readonly property color inkOnFg: luma(accent) > 0.55 ? Qt.rgba(0.07, 0.07, 0.09, 1) : Qt.rgba(0.97, 0.97, 0.98, 1)
+    readonly property color panelSolid: Qt.rgba(panelBg.r, panelBg.g, panelBg.b, 1)
+    function tint(a) { return Qt.rgba(ink.r, ink.g, ink.b, a) }
+    function accentTint(a) { return Qt.rgba(accent.r, accent.g, accent.b, a) }
 
     // Bar on top half of screen? Drives which side the popup opens on.
     readonly property bool barAtTop: {
@@ -106,7 +155,15 @@ PopupWindow {
                 { key: "customColor", label: "Custom color", kind: "color", fallback: "#7aa2f7",
                   presets: ["#7aa2f7", "#bb9af7", "#7dcfff", "#9ece6a", "#e0af68", "#ff9e64", "#f7768e", "#c0caf5"],
                   hint: "Pick one, or type a hex like #7aa2f7.",
-                  when: [{ key: "colorMode", is: ["custom"] }] }
+                  when: [{ key: "colorMode", is: ["custom"] }] },
+                { key: "panelColor", label: "Settings panel colors", kind: "scheme", fallback: "theme",
+                  options: ["theme", "custom", "monochrome"],
+                  labels: { theme: "Follow theme", custom: "Custom", monochrome: "Monochrome" },
+                  hint: "Colors of this panel. Follow theme brings in your theme's accent." },
+                { key: "panelCustomColor", label: "Panel accent color", kind: "color", fallback: "#7aa2f7",
+                  presets: ["#7aa2f7", "#bb9af7", "#7dcfff", "#9ece6a", "#e0af68", "#ff9e64", "#f7768e", "#c0caf5"],
+                  hint: "Pick one, or type a hex like #7aa2f7.",
+                  when: [{ key: "panelColor", is: ["custom"] }] }
             ]
         },
         {
@@ -376,7 +433,7 @@ PopupWindow {
                                 textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                                 anchors.centerIn: parent
                                 text: "\u266B"
-                                color: root.fg
+                                color: root.ink
                                 opacity: 0.35
                                 font.pixelSize: 22
                                 visible: root.albumArt === ""
@@ -392,7 +449,7 @@ PopupWindow {
                                 textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                                 Layout.fillWidth: true
                                 text: root.title !== "" ? root.title : "Nothing playing"
-                                color: root.fg
+                                color: root.ink
                                 font.family: root.fontFamily
                                 font.pixelSize: 11
                                 font.weight: Font.DemiBold
@@ -404,7 +461,7 @@ PopupWindow {
                                 text: root.title !== "" ? root.artist
                                     : "Preview uses sample data until music plays"
                                 visible: text !== ""
-                                color: root.fg
+                                color: root.ink
                                 opacity: 0.6
                                 font.family: root.fontFamily
                                 font.pixelSize: 9
@@ -418,7 +475,7 @@ PopupWindow {
                             implicitWidth: resetLabel.implicitWidth + 16
                             implicitHeight: 24
                             radius: 6
-                            color: root.confirmReset ? root.fg
+                            color: root.confirmReset ? root.accent
                                 : (resetArea.containsMouse ? root.tint(0.16) : root.tint(0.08))
                             Behavior on color { ColorAnimation { duration: 100 } }
 
@@ -427,7 +484,7 @@ PopupWindow {
                                 id: resetLabel
                                 anchors.centerIn: parent
                                 text: root.confirmReset ? "Really reset?" : "Reset all"
-                                color: root.confirmReset ? root.inkOnFg : root.fg
+                                color: root.confirmReset ? root.inkOnFg : root.ink
                                 font.family: root.fontFamily
                                 font.pixelSize: 9
                             }
@@ -447,7 +504,7 @@ PopupWindow {
                                 textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                                 anchors.centerIn: parent
                                 text: "\u00D7"
-                                color: root.fg
+                                color: root.ink
                                 font.pixelSize: 15
                             }
                             MouseArea {
@@ -513,7 +570,7 @@ PopupWindow {
                                 anchors.centerIn: parent
                                 anchors.verticalCenterOffset: -1
                                 text: modelData.title
-                                color: root.fg
+                                color: root.ink
                                 opacity: parent.on ? 1.0 : (tabArea.containsMouse ? 0.8 : 0.5)
                                 font.family: root.fontFamily
                                 font.pixelSize: 10
@@ -526,7 +583,7 @@ PopupWindow {
                                 anchors.bottom: parent.bottom
                                 height: 2
                                 radius: 1
-                                color: root.fg
+                                color: root.accent
                             }
                             MouseArea {
                                 id: tabArea
@@ -582,7 +639,7 @@ PopupWindow {
                                 textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                                 Layout.fillWidth: true
                                 text: "Follow which player?"
-                                color: root.fg
+                                color: root.ink
                                 font.family: root.fontFamily
                                 font.pixelSize: 10
                                 font.weight: Font.DemiBold
@@ -592,7 +649,7 @@ PopupWindow {
                                 Layout.fillWidth: true
                                 Layout.bottomMargin: 4
                                 text: "Pick one to pause the others and play it. Auto just follows whatever is playing."
-                                color: root.fg
+                                color: root.ink
                                 opacity: 0.55
                                 font.family: root.fontFamily
                                 font.pixelSize: 8
@@ -611,9 +668,9 @@ PopupWindow {
                                     implicitHeight: 46
                                     clip: true
                                     radius: 8
-                                    color: picked ? root.tint(0.14) : (pArea.containsMouse ? root.tint(0.09) : root.tint(0.04))
+                                    color: picked ? root.accentTint(0.18) : (pArea.containsMouse ? root.tint(0.09) : root.tint(0.04))
                                     border.width: picked ? 1.5 : 1
-                                    border.color: picked ? root.fg : root.tint(0.08)
+                                    border.color: picked ? root.accent : root.tint(0.08)
                                     Behavior on color { ColorAnimation { duration: 100 } }
 
                                     // radio dot
@@ -625,11 +682,11 @@ PopupWindow {
                                         width: 12; height: 12; radius: 6
                                         color: "transparent"
                                         border.width: 1.5
-                                        border.color: picked ? root.fg : root.tint(0.4)
+                                        border.color: picked ? root.accent : root.tint(0.4)
                                         Rectangle {
                                             anchors.centerIn: parent
                                             width: 6; height: 6; radius: 3
-                                            color: root.fg
+                                            color: root.accent
                                             visible: picked
                                         }
                                     }
@@ -649,7 +706,7 @@ PopupWindow {
                                             Text {
                                                 textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                                                 text: modelData.name
-                                                color: root.fg
+                                                color: root.ink
                                                 font.family: root.fontFamily
                                                 font.pixelSize: 10
                                                 font.weight: Font.DemiBold
@@ -662,7 +719,7 @@ PopupWindow {
                                                 id: viaText
                                                 visible: modelData.via !== ""
                                                 text: "via " + modelData.via
-                                                color: root.fg
+                                                color: root.ink
                                                 opacity: 0.45
                                                 font.family: root.fontFamily
                                                 font.pixelSize: 8
@@ -673,7 +730,7 @@ PopupWindow {
                                             textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                                             Layout.fillWidth: true
                                             text: modelData.sub
-                                            color: root.fg
+                                            color: root.ink
                                             opacity: 0.55
                                             font.family: root.fontFamily
                                             font.pixelSize: 8
@@ -689,7 +746,7 @@ PopupWindow {
                                         anchors.verticalCenter: parent.verticalCenter
                                         visible: !modelData.auto
                                         text: modelData.playing ? "\u25CF Playing" : "Paused"
-                                        color: root.fg
+                                        color: root.ink
                                         opacity: modelData.playing ? 0.9 : 0.4
                                         font.family: root.fontFamily
                                         font.pixelSize: 8
@@ -710,7 +767,7 @@ PopupWindow {
                                 Layout.fillWidth: true
                                 visible: root.players.length === 0
                                 text: "No players found. Start Spotify, YouTube Music, cliamp, a radio app, or play something in a browser and it will show up here."
-                                color: root.fg
+                                color: root.ink
                                 opacity: 0.55
                                 font.family: root.fontFamily
                                 font.pixelSize: 8
@@ -721,7 +778,7 @@ PopupWindow {
                                 Layout.fillWidth: true
                                 Layout.topMargin: 4
                                 text: "The visualizer listens to your system output, so it reacts to whatever is audible, not only the selected player."
-                                color: root.fg
+                                color: root.ink
                                 opacity: 0.4
                                 font.family: root.fontFamily
                                 font.pixelSize: 8
@@ -763,10 +820,18 @@ PopupWindow {
                                     dimmed: root.dimmed(modelData)
                                     value: root.val(modelData.key)
 
-                                    fg: root.fg
+                                    fg: root.ink
+                                    accent: root.accent
                                     bg: root.inkOnFg
+                                    panel: root.panelSolid
+                                    barFg: root.fg
                                     fontFamily: root.fontFamily
                                     customColor: String(root.val("customColor"))
+                                    schemeAccent: root.themeAccentColor ? root.themeAccentColor : root.accent
+                                    schemeBg: root.themeBgColor ? root.themeBgColor : root.panelSolid
+                                    schemeCustom: root.customAccentColor ? root.customAccentColor : root.accent
+                                    schemeNeutral: Qt.rgba(root.neutralBg.r, root.neutralBg.g, root.neutralBg.b, 1)
+                                    schemeMono: root.neutralInk
                                     demoSpectrum: root.demoSpectrum
                                     demoScope: root.demoScope
 
@@ -793,7 +858,7 @@ PopupWindow {
                         id: escLabel
                         anchors.centerIn: parent
                         text: "Esc"
-                        color: root.fg
+                        color: root.ink
                         opacity: 0.75
                         font.family: root.fontFamily
                         font.pixelSize: 8
@@ -802,7 +867,7 @@ PopupWindow {
                 Text {
                     textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                     text: "close"
-                    color: root.fg
+                    color: root.ink
                     opacity: 0.45
                     font.family: root.fontFamily
                     font.pixelSize: 8
@@ -811,7 +876,7 @@ PopupWindow {
                 Text {
                     textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
                     text: "Changes apply instantly"
-                    color: root.fg
+                    color: root.ink
                     opacity: 0.45
                     font.family: root.fontFamily
                     font.pixelSize: 8
