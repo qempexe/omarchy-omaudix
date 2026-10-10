@@ -22,7 +22,7 @@ BarWidget {
     }
 
     // ---- settings: every key read here is declared in manifest.json --------
-    readonly property var styleChoices: ["bars", "mirror", "wave", "scope", "dots", "led", "ring", "area"]
+    readonly property var styleChoices: ["bars", "mirror", "wave", "scope", "dots", "led", "ring", "area", "peaks", "capsules", "steps", "neon", "lightning", "heartbeat", "ripple", "helix", "comet", "stellar", "meter", "orb"]
 
     readonly property string styleSetting: pick(over("vizStyle", setting("vizStyle", "bars")), styleChoices, "bars")
     readonly property string vizSide: pick(over("vizSide", setting("vizSide", "left")), ["left", "right", "both", "hidden"], "left")
@@ -87,7 +87,8 @@ BarWidget {
     readonly property bool vizLeft: vizSide === "left" || vizSide === "both"
     readonly property bool vizRight: vizSide === "right" || vizSide === "both"
     readonly property real vizHeight: Style.space(18)
-    readonly property real vizItemWidth: effStyle === "ring" ? vizHeight + Style.space(2) : vizWidth
+    readonly property bool squareStyle: effStyle === "ring" || effStyle === "orb"
+    readonly property real vizItemWidth: squareStyle ? vizHeight + Style.space(2) : vizWidth
     readonly property color fg: bar ? bar.barForeground : Color.foreground
     readonly property string fontName: bar ? bar.fontFamily : Style.font.family
 
@@ -145,6 +146,26 @@ BarWidget {
         target: root.service
         ignoreUnknownSignals: true
         function onFollowed(playerId) { settingsStore.set("player", playerId) }
+    }
+
+    // A temporary style set from outside (IPC) must never shadow a style the
+    // user just picked, so any style edit drops it and the pick shows at once.
+    Connections {
+        target: settingsStore
+        function onKeyChanged(key) {
+            if ((key === "vizStyle" || key === "*") && root.service && root.service.styleOverride !== "")
+                root.service.styleOverride = ""
+        }
+    }
+
+    // Wheel over the widget: step through the styles and keep the choice.
+    function stepStyle(step) {
+        var i = styleChoices.indexOf(effStyle)
+        if (i < 0) i = 0
+        var n = styleChoices.length
+        var next = styleChoices[(i + (step < 0 ? n - 1 : 1)) % n]
+        if (service) service.styleOverride = ""
+        settingsStore.set("vizStyle", next)
     }
 
     onWantsVizChanged: syncRegistration()
@@ -280,7 +301,7 @@ BarWidget {
 
                 onClicked: function(mouse) {
                     if (mouse.button === Qt.RightButton) {
-                        settingsPopup.visible = !settingsPopup.visible
+                        settingsPopup.toggle()
                         return
                     }
                     if (!root.service) return
@@ -292,7 +313,7 @@ BarWidget {
                 onWheel: function(wheel) {
                     if (!root.service || root.wheelAction === "none") return
                     var up = wheel.angleDelta.y > 0
-                    if (root.wheelAction === "style") root.service.cycleStyle(root.effStyle, up ? -1 : 1)
+                    if (root.wheelAction === "style") root.stepStyle(up ? -1 : 1)
                     else root.service.runAction(up ? "previous" : "next")
                 }
 
@@ -321,7 +342,7 @@ BarWidget {
             HoverHandler { onHoveredChanged: root.tip(gearH, hovered, "Omaudix settings") }
             onClicked: {
                 root.tip(gearH, false, "")
-                settingsPopup.visible = !settingsPopup.visible
+                settingsPopup.toggle()
             }
         }
     }
@@ -390,7 +411,7 @@ BarWidget {
             HoverHandler { onHoveredChanged: root.tip(gearV, hovered, "Omaudix settings") }
             onClicked: {
                 root.tip(gearV, false, "")
-                settingsPopup.visible = !settingsPopup.visible
+                settingsPopup.toggle()
             }
         }
     }
@@ -400,6 +421,8 @@ BarWidget {
         id: settingsPopup
         store: settingsStore
         anchorItem: root
+        barObject: root.bar
+        vertical: root.vertical
         fg: root.fg
         fontFamily: root.fontName
         panelMode: root.panelColor

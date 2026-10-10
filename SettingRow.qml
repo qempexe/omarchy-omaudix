@@ -15,6 +15,11 @@ import QtQuick.Layouts
 //
 // Text and soft tints come from `fg`; selected / filled parts use `accent`
 // (the theme accent, a custom color, or `fg` in monochrome). Numbers are shown plain: no px / ms / % suffixes.
+//
+// Paste: text fields never run Qt's native paste, because it reads the whole
+// clipboard on the GUI thread with no size cap. Paste requests are emitted as
+// `clipboardPaste(target, maxBytes)`; the owner must read at most `maxBytes`
+// and then call `insertPasted(target, text)`.
 Item {
     id: root
 
@@ -47,7 +52,12 @@ Item {
     property var demoSpectrum: []
     property var demoScope: []
 
+    // Byte cap for any clipboard read triggered from a text field.
+    property int pasteMaxBytes: 1024
+    property int maxLength: 256        // text fields: max characters stored
+
     signal edited(var v)
+    signal clipboardPaste(var target, int maxBytes)
 
     // ---- helpers -----------------------------------------------------------
     function tint(a) { return Qt.rgba(fg.r, fg.g, fg.b, a) }
@@ -65,6 +75,16 @@ Item {
         var cur = Number(value)
         var v = Math.max(min, Math.min(max, cur + dir * step))
         if (v !== cur) edited(v)
+    }
+
+    // Requests a capped clipboard read for `target`; the owner answers via insertPasted().
+    function boundedPaste(target) { clipboardPaste(target, pasteMaxBytes) }
+
+    // Owner calls this with the capped text. Single line only, inserted at the cursor.
+    function insertPasted(target, raw) {
+        if (!target) return
+        var t = String(raw === null || raw === undefined ? "" : raw).split(/\r?\n/)[0]
+        target.insert(target.cursorPosition, t)
     }
 
     readonly property bool boolValue: value === true || value === "true"
@@ -105,6 +125,44 @@ Item {
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
             onClicked: btn.clicked()
+        }
+    }
+
+    // Single-line input that never runs Qt's native paste. Ctrl+V / Shift+Insert
+    // go to `pasteRequested`, and middle-click (primary-selection paste) is
+    // swallowed by the overlay below.
+    component GuardedTextInput: TextInput {
+        id: field
+        property int maxChars: 256
+        signal pasteRequested()
+
+        maximumLength: maxChars     // caps what is stored; does not bound the read
+        selectByMouse: true
+        clip: true
+
+        // Enforce the limit on typed input directly, not only through maximumLength.
+        onTextEdited: {
+            if (text.length > maxChars) {
+                var pos = cursorPosition
+                text = text.substring(0, maxChars)
+                cursorPosition = Math.min(pos, maxChars)
+            }
+        }
+
+        Keys.onPressed: function(event) {
+            if (event.matches(StandardKey.Paste)) {
+                event.accepted = true   // stops TextInput's own paste
+                field.pasteRequested()
+            }
+        }
+
+        // Accepts only middle-button presses, so Qt never gets the release that
+        // triggers primary-selection paste. Left and right buttons fall through.
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.MiddleButton
+            onPressed: function(mouse) { mouse.accepted = true }
+            onReleased: function(mouse) { mouse.accepted = true }
         }
     }
 
@@ -467,8 +525,12 @@ Item {
                 border.width: 1
                 border.color: textIn.activeFocus ? root.accent : root.tint(0.12)
 
-                TextInput {
+                GuardedTextInput {
                     id: textIn
+
+                    maxChars: root.maxLength
+
+                    onPasteRequested: root.boundedPaste(textIn)
                     anchors.fill: parent
                     anchors.leftMargin: 9
                     anchors.rightMargin: 9
@@ -570,8 +632,12 @@ Item {
                     border.width: 1
                     border.color: hexIn.activeFocus ? root.accent : root.tint(0.12)
 
-                    TextInput {
+                    GuardedTextInput {
                         id: hexIn
+
+                        maxChars: 9          // '#' + 8 hex digits
+
+                        onPasteRequested: root.boundedPaste(hexIn)
                         anchors.fill: parent
                         anchors.leftMargin: 9
                         anchors.rightMargin: 9

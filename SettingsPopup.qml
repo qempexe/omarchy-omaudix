@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
+import Quickshell.Io
 import qs.Commons
 
 // Floating settings panel for Omaudix.
@@ -19,6 +20,7 @@ PopupWindow {
 
     property var store: null
     property var anchorItem: null
+    property bool vertical: false             // bar is on the left / right edge
     property color fg: "white"
     property string fontFamily: ""
     property string panelMode: "theme"            // theme | custom | monochrome
@@ -91,17 +93,144 @@ PopupWindow {
     function tint(a) { return Qt.rgba(ink.r, ink.g, ink.b, a) }
     function accentTint(a) { return Qt.rgba(accent.r, accent.g, accent.b, a) }
 
-    // Bar on top half of screen? Drives which side the popup opens on.
-    readonly property bool barAtTop: {
-        if (!root.anchorItem || !root.anchorItem.screen) return true
-        var pos = root.anchorItem.mapToItem(null, 0, 0)
-        return pos.y < root.anchorItem.screen.height / 2
+    // ---- placement: never overlap the bar -----------------------------------------
+    // Worked out each time the panel is about to open (see toggle()), because the
+    // bar's position is not known yet when this file is first loaded.
+    //
+    // The panel is anchored to the outer edge of the bar's own window (not to the
+    // widget, which sits inside the bar's padding), and the gap is transparent
+    // padding inside the popup window, so it works whatever the compositor does
+    // with anchor margins.
+    property var barObject: null              // the shell's bar, used as a hint for its edge
+    property bool barAtTop: true              // horizontal bar: top edge (else bottom)
+    property bool barAtLeft: true             // vertical bar: left edge (else right)
+    property bool useRect: false              // anchor to the bar window's edge
+    property var anchorWin: null
+    property real rectX: 0
+    property real rectY: 0
+    property real rectW: 1
+    property real rectH: 1
+    property real extra: 0                    // extra clearance when only the widget is known
+    property real maxHeight: 620
+    readonly property int gap: 0              // free space between the bar and the panel (0 = flush)
+    readonly property real padTop: (!vertical && barAtTop) ? gap + extra : 0
+    readonly property real padBottom: (!vertical && !barAtTop) ? gap + extra : 0
+    readonly property real padLeft: (vertical && barAtLeft) ? gap + extra : 0
+    readonly property real padRight: (vertical && !barAtLeft) ? gap + extra : 0
+
+    function sideFromText(v) {
+        var t = String(v === undefined || v === null ? "" : v).toLowerCase()
+        if (t.indexOf("top") >= 0) return "top"
+        if (t.indexOf("bottom") >= 0) return "bottom"
+        if (t.indexOf("left") >= 0) return "left"
+        if (t.indexOf("right") >= 0) return "right"
+        return ""
     }
 
-    readonly property real maxHeight: {
-        var scr = root.anchorItem ? root.anchorItem.screen : null
-        var available = scr ? (scr.height - 140) : 620
-        return Math.max(360, Math.min(680, available))
+    function locate() {
+        var item = root.anchorItem
+        if (!item) return
+        var scr = item.screen
+        var sw = scr ? scr.width : 1920
+        var sh = scr ? scr.height : 1080
+        var side = ""
+        var qsWin = null
+        var win = null
+
+        // 1. the bar window knows which edges it is attached to
+        try { qsWin = item.QsWindow.window } catch (e0) { qsWin = null }
+        try { win = qsWin ? qsWin : item.Window.window } catch (e1) { win = null }
+        try {
+            var an = win ? win.anchors : null
+            if (an) {
+                if (root.vertical) {
+                    if (an.left && !an.right) side = "left"
+                    else if (an.right && !an.left) side = "right"
+                } else {
+                    if (an.top && !an.bottom) side = "top"
+                    else if (an.bottom && !an.top) side = "bottom"
+                }
+            }
+        } catch (e2) { side = "" }
+
+        // 2. the shell's bar object may say it outright
+        if (side === "" && root.barObject) {
+            var names = ["position", "barPosition", "edge", "side", "location", "placement", "barSide"]
+            for (var i = 0; i < names.length && side === ""; i++) {
+                var got = ""
+                try { got = root.sideFromText(root.barObject[names[i]]) } catch (e3) { got = "" }
+                if ((root.vertical && (got === "left" || got === "right"))
+                        || (!root.vertical && (got === "top" || got === "bottom")))
+                    side = got
+            }
+        }
+
+        // 3. last resort: which half of the screen (only meaningful when the bar
+        //    window is as big as the screen)
+        var pos = item.mapToItem(null, 0, 0)
+        if (side === "") {
+            if (root.vertical) side = pos.x < sw / 2 ? "left" : "right"
+            else side = pos.y < sh / 2 ? "top" : "bottom"
+        }
+        root.barAtTop = side === "top"
+        root.barAtLeft = side === "left"
+
+        // Anchor rectangle on the bar window's outer edge (window coordinates).
+        var ww = (win && win.width > 0) ? win.width : 0
+        var wh = (win && win.height > 0) ? win.height : 0
+        var small = root.vertical ? (ww > 0 && ww < sw * 0.5) : (wh > 0 && wh < sh * 0.5)
+        root.useRect = !!qsWin && small
+        root.anchorWin = qsWin
+        if (root.useRect) {
+            if (root.vertical) {
+                root.rectW = 1
+                root.rectH = Math.max(1, item.height)
+                root.rectY = pos.y
+                root.rectX = side === "left" ? Math.max(0, ww - 1) : 0
+            } else {
+                root.rectW = Math.max(1, item.width)
+                root.rectH = 1
+                root.rectX = pos.x
+                root.rectY = side === "top" ? Math.max(0, wh - 1) : 0
+            }
+            root.extra = 0
+        } else {
+            root.extra = 6                    // only the widget is known: allow a little for bar padding
+        }
+
+        // Tallest the panel may be and still fit between the bar and the far edge.
+        var thick = (!root.vertical && wh > 0 && wh < sh * 0.5) ? wh : 40
+        var room = root.vertical ? sh - 40 : sh - thick - root.gap - root.extra - 16
+        root.maxHeight = Math.max(300, Math.min(680, room))
+    }
+
+    function toggle() {
+        // A click on the widget while the panel is open first closes it as an
+        // "outside click" (below); don't let the same click open it again.
+        if (!root.visible && Date.now() - root.grabClosedAt < 500) return
+        if (!root.visible) root.locate()
+        root.visible = !root.visible
+    }
+
+    // ---- click outside to close -----------------------------------------------------
+    // Hyprland's focus grab reports any click outside the panel. It is created at
+    // runtime so a shell without that module simply keeps the X button and Esc.
+    property var grab: null
+    property double grabClosedAt: 0
+
+    Component.onCompleted: {
+        try {
+            var g = Qt.createQmlObject(
+                'import Quickshell.Hyprland\nHyprlandFocusGrab { }', root, "OmaudixFocusGrab")
+            g.windows = [root]
+            g.cleared.connect(function() {
+                root.grabClosedAt = Date.now()
+                root.visible = false
+            })
+            root.grab = g
+        } catch (e) {
+            root.grab = null
+        }
     }
 
     // ---- sample data for the tiles / idle preview ----------------------------
@@ -125,17 +254,20 @@ PopupWindow {
             title: "Look",
             items: [
                 { key: "vizStyle", label: "Style", kind: "viz", fallback: "bars",
-                  options: ["bars", "mirror", "wave", "scope", "dots", "led", "ring", "area"],
+                  options: ["bars", "mirror", "wave", "scope", "dots", "led", "ring", "area", "peaks", "capsules", "steps", "neon", "lightning", "heartbeat", "ripple", "helix", "comet", "stellar", "meter", "orb"],
                   labels: { bars: "Bars", mirror: "Mirror", wave: "Wave", scope: "Scope",
-                            dots: "Dots", led: "LED", ring: "Ring", area: "Area" },
-                  hint: "How the music is drawn." },
+                            dots: "Dots", led: "LED", ring: "Ring", area: "Area",
+                            peaks: "Peaks", capsules: "Capsules", steps: "Steps", neon: "Neon",
+                            lightning: "Lightning", heartbeat: "Heartbeat", ripple: "Ripple", helix: "Helix",
+                            comet: "Comet", stellar: "Stellar", meter: "Meter", orb: "Orb" },
+                  hint: "How the music is drawn. Scroll the wheel over the widget to flip through them." },
                 { key: "vizSide", label: "Placement", kind: "enum", fallback: "left",
                   options: ["left", "right", "both", "hidden"],
                   labels: { left: "Left", right: "Right", both: "Both", hidden: "Hidden" },
                   hint: "Which side of the text it sits on. Both mirrors it." },
                 { key: "vizWidth", label: "Width", kind: "int", fallback: 72,
                   min: 24, max: 240, step: 4,
-                  hint: "How wide it is. The ring always stays square.",
+                  hint: "How wide it is. Ring and Orb always stay square.",
                   when: [{ key: "vizSide", is: ["left", "right", "both"] }] },
                 { key: "coverSide", label: "Cover on the bar", kind: "enum", fallback: "hidden",
                   options: ["hidden", "left", "center", "right"],
@@ -147,7 +279,7 @@ PopupWindow {
                   when: [{ key: "coverSide", is: ["left", "center", "right"] }] },
                 { key: "barCount", label: "Bar count", kind: "int", fallback: 20,
                   min: 6, max: 64, step: 2,
-                  hint: "Fewer looks chunky, more looks fine." },
+                  hint: "Fewer looks chunky, more looks fine. Used by bar-like styles." },
                 { key: "colorMode", label: "Color", kind: "colors", fallback: "theme",
                   options: ["theme", "fade", "rainbow", "custom"],
                   labels: { theme: "Theme", fade: "Fade", rainbow: "Rainbow", custom: "Custom" },
@@ -196,6 +328,7 @@ PopupWindow {
                   hint: "What to show, and in which order.",
                   when: [{ key: "showText", is: [true] }] },
                 { key: "separator", label: "Separator", kind: "string", fallback: " - ",
+                  maxLength: 5,
                   presets: [" - ", " \u2013 ", " \u2022 ", " | ", " \u00B7 "],
                   hint: "Goes between artist and title.",
                   when: [{ key: "showText", is: [true] },
@@ -246,7 +379,7 @@ PopupWindow {
                 { key: "wheelAction", label: "Scroll wheel", kind: "enum", fallback: "track",
                   options: ["track", "style", "none"],
                   labels: { track: "Skip tracks", style: "Change style", none: "Nothing" },
-                  hint: "Style changes last until the shell restarts." },
+                  hint: "Style changes are saved as you scroll." },
                 { key: "hideWhenPaused", label: "Hide when paused", kind: "bool", fallback: false,
                   hint: "Remove the widget from the bar while nothing plays." },
                 { key: "pauseOthers", label: "Pause the old player", kind: "bool", fallback: false,
@@ -303,6 +436,42 @@ PopupWindow {
         root.store.resetAll(root.defaults)
     }
 
+    // ---- clipboard paste for text fields ---------------------------------------
+    // Native paste is disabled in SettingRow. A paste request runs a fixed command
+    // that reads at most `pasteMaxBytes` from the clipboard, and the text is handed
+    // back to the row that asked. One paste runs at a time; extra requests are dropped.
+    readonly property int pasteMaxBytes: 1024
+    property var pasteRow: null
+    property var pasteTarget: null
+
+    function requestPaste(row, target) {
+        if (pasteProc.running) return
+        pasteRow = row
+        pasteTarget = target
+        pasteProc.running = true
+    }
+
+    function finishPaste(raw) {
+        var row = pasteRow
+        var target = pasteTarget
+        pasteRow = null
+        pasteTarget = null
+        if (!row || !target) return
+        try { row.insertPasted(target, raw) } catch (e) { }   // row may have closed mid-paste
+    }
+
+    Process {
+        id: pasteProc
+        running: false
+        // Fixed command, no user input. timeout ends a stalled clipboard read;
+        // head -c stops wl-paste early, so a huge clipboard never gets fully read.
+        command: ["sh", "-c", "timeout 2 wl-paste --no-newline 2>/dev/null | head -c 1024"]
+        stdout: StdioCollector {
+            id: pasteOut
+            onStreamFinished: root.finishPaste(pasteOut.text)
+        }
+    }
+
     // ---- player list ----------------------------------------------------------
     readonly property bool preferredRunning: root.selectedId !== ""
 
@@ -351,17 +520,27 @@ PopupWindow {
     // ---- window geometry -------------------------------------------------------
     visible: false
     color: "transparent"
-    implicitWidth: 440
-    implicitHeight: Math.min(root.maxHeight, mainCol.implicitHeight + 28)
+    implicitWidth: 440 + root.padLeft + root.padRight
+    implicitHeight: Math.min(root.maxHeight, mainCol.implicitHeight + 28) + root.padTop + root.padBottom
 
-    anchor.item: root.anchorItem
-    anchor.edges: root.barAtTop ? Edges.Bottom : Edges.Top
-    anchor.gravity: root.barAtTop ? Edges.Top : Edges.Bottom
-    anchor.margins.top: root.barAtTop ? 8 : 0
-    anchor.margins.bottom: root.barAtTop ? 0 : 8
-    anchor.adjustment: PopupAdjustment.SlideX | PopupAdjustment.SlideY
+    anchor.item: root.useRect ? null : root.anchorItem
+    anchor.window: root.useRect ? root.anchorWin : null
+    anchor.rect.x: root.rectX
+    anchor.rect.y: root.rectY
+    anchor.rect.width: root.rectW
+    anchor.rect.height: root.rectH
+    // The panel opens on the side of the anchor facing away from the bar.
+    anchor.edges: root.vertical ? (root.barAtLeft ? Edges.Right : Edges.Left)
+                                : (root.barAtTop ? Edges.Bottom : Edges.Top)
+    anchor.gravity: root.vertical ? (root.barAtLeft ? Edges.Right : Edges.Left)
+                                  : (root.barAtTop ? Edges.Bottom : Edges.Top)
+    // Only slide along the bar, never across it, so the panel can't be pushed onto the bar.
+    anchor.adjustment: root.vertical ? PopupAdjustment.SlideY : PopupAdjustment.SlideX
 
-    onVisibleChanged: if (!visible) root.confirmReset = false
+    onVisibleChanged: {
+        if (!visible) root.confirmReset = false
+        if (root.grab) Qt.callLater(function() { root.grab.active = root.visible })
+    }
 
     Timer { id: confirmTimer; interval: 2500; onTriggered: root.confirmReset = false }
 
@@ -383,6 +562,10 @@ PopupWindow {
 
     Rectangle {
         anchors.fill: parent
+        anchors.topMargin: root.padTop
+        anchors.bottomMargin: root.padBottom
+        anchors.leftMargin: root.padLeft
+        anchors.rightMargin: root.padRight
         color: root.panelBg
         border.color: root.tint(0.14)
         border.width: 1
@@ -527,8 +710,8 @@ PopupWindow {
 
                         Visualizer {
                             anchors.centerIn: parent
-                            width: root.previewStyle === "ring" ? 28 : parent.width - 32
-                            height: root.previewStyle === "ring" ? 28 : 26
+                            width: (root.previewStyle === "ring" || root.previewStyle === "orb") ? 28 : parent.width - 32
+                            height: (root.previewStyle === "ring" || root.previewStyle === "orb") ? 28 : 26
                             levels: root.previewLevels
                             vizStyle: root.previewStyle
                             colorMode: String(root.val("colorMode"))
@@ -801,6 +984,7 @@ PopupWindow {
                                 }
 
                                 SettingRow {
+                                    id: settingRow
                                     Layout.fillWidth: true
                                     Layout.topMargin: 12
                                     Layout.bottomMargin: 12
@@ -811,6 +995,7 @@ PopupWindow {
                                     options: modelData.options || []
                                     labels: modelData.labels || ({})
                                     presets: modelData.presets || []
+                                    maxLength: modelData.maxLength !== undefined ? modelData.maxLength : 256
                                     min: modelData.min !== undefined ? modelData.min : 0
                                     max: modelData.max !== undefined ? modelData.max : 100
                                     step: modelData.step !== undefined ? modelData.step : 1
@@ -836,6 +1021,7 @@ PopupWindow {
                                     demoScope: root.demoScope
 
                                     onEdited: function(v) { root.setValue(modelData, v) }
+                                    onClipboardPaste: function(target, maxBytes) { root.requestPaste(settingRow, target) }
                                 }
                             }
                         }

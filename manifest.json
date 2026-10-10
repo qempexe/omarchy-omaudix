@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.qempexe.omaudix",
   "name": "Omaudix",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "author": "qempexe",
   "license": "MIT",
   "description": "Now-playing bar widget with eight live visualizers (cava or built-in), left/right placement, fixed-width scrolling track text, and a settings panel that can follow your theme.",

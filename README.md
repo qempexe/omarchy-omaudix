@@ -11,8 +11,13 @@ A now-playing widget for the Omarchy bar: live visualizer, fixed-width scrolling
 
 ## Features
 
-- **8 visualizer styles**: `bars`, `mirror`, `wave` (smooth blob), `scope` (real
-  oscilloscope), `dots`, `led` (segmented meter), `ring` (radial), `area` (filled mountain).
+- **20 visualizer styles**: the originals `bars`, `mirror`, `wave` (smooth blob), `scope` (real
+  oscilloscope), `dots`, `led` (segmented meter), `ring` (radial) and `area` (filled mountain), plus
+  `peaks` (bars with falling caps), `capsules` (rounded pills growing from the middle), `steps`
+  (blocky staircase), `neon` (glowing spectrum line), `lightning` (jagged bolt through the middle),
+  `heartbeat` (ECG trace), `ripple` (travelling sine with a reflection), `helix` (twisting double
+  strand), `comet` (bright head dragging a tail where the energy sits), `stellar` (stars that sparkle
+  with the music), `meter` (horizontal level meter with a falling peak marker) and `orb` (pulsing sphere).
 - **4 color modes**: follow the bar theme, fade, rainbow, or your own hex color.
 - **Settings panel colors**: the settings panel itself can `theme` (bring your Omarchy theme's
   accent and background into the panel), use a `custom` accent hex, or stay `monochrome` (neutral grey).
@@ -22,7 +27,7 @@ A now-playing widget for the Omarchy bar: live visualizer, fixed-width scrolling
 - **Capped-width text**: titles that fit are shown at their own width (buttons sit right next to
   them; turn off `compactText` for a fixed width). Text that does not fit scrolls `left`, `right`, `bounce`s, or is truncated (`off`). Speed and the
   rest time before each scroll are adjustable. Text that fits can be left/center/right aligned.
-- **Text format**: `artist - title`, `title - artist`, title only, artist only, custom separator.
+- **Text format**: `artist - title`, `title - artist`, title only, artist only, custom separator (up to 5 characters).
 - **Spectrum engine**: uses `cava` if installed, otherwise a built-in FFT (about 3% of one
   core at 30 fps). The scope style always uses its own capture.
 - **Tuning**: sensitivity, smoothing, frame rate, band count.
@@ -50,6 +55,7 @@ A now-playing widget for the Omarchy bar: live visualizer, fixed-width scrolling
 
 - [Omarchy](https://omarchy.org) with its Quickshell-based bar
 - PipeWire (`pw-record`) and Python 3, used by the built-in spectrum engine and the scope
+- Wayland, with `wl-clipboard` (`wl-paste`) and coreutils `timeout`, used for pasting into the settings text fields
 - Optional: [cava](https://github.com/karlstav/cava) for its spectrum engine (install it with your package manager)
 
 ## Install
@@ -84,7 +90,7 @@ All of these appear in Omarchy's widget settings UI.
 
 | Setting | Values | Default |
 | --- | --- | --- |
-| `vizStyle` | bars, mirror, wave, scope, dots, led, ring, area | bars |
+| `vizStyle` | bars, mirror, wave, scope, dots, led, ring, area, peaks, capsules, steps, neon, lightning, heartbeat, ripple, helix, comet, stellar, meter, orb | bars |
 | `vizSide` | left, right, both, hidden | left |
 | `vizWidth` | 24-240 px | 72 |
 | `barCount` | 6-64 | 20 |
@@ -92,14 +98,14 @@ All of these appear in Omarchy's widget settings UI.
 | `customColor` | hex like `#7aa2f7` | #7aa2f7 |
 | `panelColor` | theme, custom, monochrome (colors of the settings panel) | theme |
 | `panelCustomColor` | hex like `#7aa2f7` (used when `panelColor` is custom) | #7aa2f7 |
-| `sensitivity` | 25-400 % | 100 |
+| `sensitivity` | 25-400 (100 = normal, shown as 1.00) | 100 |
 | `smoothing` | 0-100 | 60 |
 | `fps` | 15-60 | 30 |
 | `engine` | auto, cava, builtin | auto |
 | `player` | auto or a D-Bus name (pick it in the panel) | auto |
 | `showText` | true / false | true |
 | `textFormat` | artist-title, title-artist, title, artist | artist-title |
-| `separator` | any text | ` - ` |
+| `separator` | up to 5 characters | ` - ` |
 | `compactText` | true / false | true |
 | `textWidth` | 60-400 px (maximum) | 160 |
 | `scrollDirection` | left, right, bounce, off | left |
@@ -115,6 +121,11 @@ All of these appear in Omarchy's widget settings UI.
 | `clickAction` | playPause, next, none | playPause |
 | `wheelAction` | track, style, none | track |
 | `showAlbumArt` | true / false (cover in the settings panel header) | true |
+
+Pasting into the settings text fields (separator, custom colors) reads at most 1024 bytes of the
+clipboard through `wl-paste`, so a very large clipboard cannot stall the shell. Native paste is off
+in those fields: use Ctrl+V or Shift+Insert, which go through the same capped read. The separator
+is limited to 5 characters for typed and pasted input.
 
 Inline form in `~/.config/omarchy/shell.json`:
 

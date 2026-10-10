@@ -13,7 +13,7 @@ Item {
     property var manifest: null
 
     readonly property string pluginId: "io.github.qempexe.omaudix"
-    readonly property var styleNames: ["bars", "mirror", "wave", "scope", "dots", "led", "ring", "area"]
+    readonly property var styleNames: ["bars", "mirror", "wave", "scope", "dots", "led", "ring", "area", "peaks", "capsules", "steps", "neon", "lightning", "heartbeat", "ripple", "helix", "comet", "stellar", "meter", "orb"]
 
     // ---- media -----------------------------------------------------------
     // Third-party plugins cannot reach omarchy.media (the shell only hands that
@@ -317,12 +317,18 @@ Item {
             engine: engines.indexOf(cfg.engine) >= 0 ? cfg.engine : "auto"
         }
         if (JSON.stringify(next) === JSON.stringify(config)) return
-        var modeChanged = (next.style === "scope") !== (config.style === "scope")
+        var prev = config
+        var modeChanged = (next.style === "scope") !== (prev.style === "scope")
+        // The helper only cares about these. A pure style change (bars -> neon)
+        // is drawn by the widget from the same data, so it needs no restart and
+        // shows up on the very next frame.
+        var helperChanged = modeChanged || next.bars !== prev.bars || next.fps !== prev.fps
+            || next.gain !== prev.gain || next.smooth !== prev.smooth || next.engine !== prev.engine
         config = next
         if (modeChanged) levels = []
         failures = 0
         fatal = false
-        if (shouldRun) restartHelper()
+        if (helperChanged && shouldRun) restartHelper()
     }
 
     // ---- helper process lifecycle -----------------------------------------
@@ -448,7 +454,7 @@ Item {
 
     Timer {
         id: startTimer
-        interval: 150
+        interval: 180
         repeat: false
         onTriggered: root.startHelper()
     }
