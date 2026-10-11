@@ -17,6 +17,13 @@ Item {
     property var values: ({})
     property bool loaded: false
 
+    // Edits made before settings.json has been read. They are kept in memory
+    // and merged over the file once it loads, so a very early write (for
+    // example the service following a player at startup) can never replace the
+    // saved settings with a nearly empty file.
+    property var pending: ({})
+    property bool pendingAll: false     // a reset happened before the first load
+
     signal changed()
     // Which key was just edited ("*" = many keys or an external edit).
     signal keyChanged(string key)
@@ -32,6 +39,12 @@ Item {
         if (value === null || value === undefined) delete next[key]
         else next[key] = value
         values = next
+        if (!loaded && !pendingAll) {
+            var p = {}
+            for (var pk in pending) p[pk] = pending[pk]
+            p[key] = (value === undefined) ? null : value
+            pending = p
+        }
         persist()
         changed()
         keyChanged(key)
@@ -39,6 +52,7 @@ Item {
 
     function reset() {
         values = ({})
+        if (!loaded) pendingAll = true
         persist()
         changed()
         keyChanged("*")
@@ -49,6 +63,7 @@ Item {
         var next = {}
         for (var k in defaults) next[k] = defaults[k]
         values = next
+        if (!loaded) pendingAll = true
         persist()
         changed()
         keyChanged("*")
@@ -70,6 +85,7 @@ Item {
     // of changes after it is written once, shortly after the last one.
     function persist() {
         dirty = true
+        if (!loaded) return              // written right after the file is read
         if (Date.now() - lastWrite > 300) writeNow()
         else writeTimer.restart()
     }
@@ -101,7 +117,27 @@ Item {
             if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) next = parsed
         } catch (e) { }
         var wasLoaded = loaded
-        loaded = true
+        if (!wasLoaded) {
+            // First read: saved file + anything edited before it arrived.
+            var merged = {}
+            if (!pendingAll && next !== null)
+                for (var fk in next) merged[fk] = next[fk]
+            if (pendingAll) {
+                for (var vk in values) merged[vk] = values[vk]
+            } else {
+                for (var pk in pending) {
+                    if (pending[pk] === null) delete merged[pk]
+                    else merged[pk] = pending[pk]
+                }
+            }
+            var touched = pendingAll || Object.keys(pending).length > 0
+            values = merged
+            pending = ({})
+            pendingAll = false
+            loaded = true
+            if (touched) { dirty = true; writeNow() }
+            return
+        }
         if (next === null) return                  // empty or unreadable: keep what we have
         if (JSON.stringify(next) === JSON.stringify(values)) return
         values = next                              // edited elsewhere (another bar, by hand)
@@ -128,7 +164,12 @@ Item {
         path: root.path
         watchChanges: true
         onFileChanged: reload()
-        onTextChanged: root.absorb(text)
-        onLoaded: root.absorb(text)
+        // text is a function in FileView, so it must be called: passing `text`
+        // itself handed absorb() the function, never the file, and the saved
+        // settings were never read back.
+        onTextChanged: root.absorb(text())
+        onLoaded: root.absorb(text())
+        // No file yet (first run): nothing to restore, but start saving.
+        onLoadFailed: function(error) { root.absorb("") }
     }
 }

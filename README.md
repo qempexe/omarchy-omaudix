@@ -42,14 +42,31 @@ A now-playing widget for the Omarchy bar: live visualizer, fixed-width scrolling
   `left` (before everything), `center` (right before the text) or `right` (after everything).
 - **Follows external changes**: when another player starts playing, Omaudix switches to it. Turn on
   `pauseOthers` to also pause whichever player was playing before (off by default).
+- **Settings stay put**: every change made in the settings panel is saved to
+  `~/.local/state/omarchy-omaudix/settings.json` and restored after a shell restart, logout or reboot.
+  Only the panel's **Reset all** button (or deleting that file) brings the defaults back.
 - Horizontal and vertical bars, multi-monitor safe (one shared audio helper).
 - The audio helper only runs while something is playing and the visualizer is visible.
 
-![Omaudix photo](photo.png)
+## Showcase
 
-![Omaudix photo2](photo2.png)
+### Bar combinations
+
+Every style, color mode, cover and placement can be mixed. A few of the many combinations:
+
+![Omaudix bar combinations](combos.png)
 
 ... and many, many more combinations!
+
+### Settings panel
+
+Five tabs, all changes apply instantly and are saved. **Look** picks the style, placement, width and colors:
+
+![Omaudix settings: Look](settings-look.png)
+
+**Player**, **Response**, **Text** and **Behavior** (left to right):
+
+![Omaudix settings: Player, Response, Text, Behavior](settings-tabs.png)
 
 ## Requirements
 
@@ -162,6 +179,7 @@ app is making sound at the same time, it will show up in the visualizer as well.
 python3 tests/test_viz.py        # helper: FFT bands, scope, pacing, fake pw-record end to end
 python3 tests/test_manifest.py   # manifest vs. QML settings drift
 ```
+
 
 
 ## Credits and thanks

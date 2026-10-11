@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "id": "io.github.qempexe.omaudix",
   "name": "Omaudix",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "author": "qempexe",
   "license": "MIT",
-  "description": "Now-playing bar widget with eight live visualizers (cava or built-in), left/right placement, fixed-width scrolling track text, and a settings panel that can follow your theme.",
+  "description": "Now-playing bar widget with twenty live visualizers (cava or built-in), left/right placement, fixed-width scrolling track text, and a settings panel that can follow your theme.",
   "kinds": [
     "service",
     "bar-widget"
@@ -19,7 +19,13 @@
     "displayName": "Omaudix",
     "description": "Visualizer, scrolling artist - title and playback controls",
     "category": "Media",
-    "aliases": ["visualizer", "cava", "wavebar", "music", "player"],
+    "aliases": [
+      "visualizer",
+      "cava",
+      "wavebar",
+      "music",
+      "player"
+    ],
     "allowMultiple": false,
     "defaultSection": "left",
     "defaults": {
@@ -60,15 +66,41 @@
         "key": "vizStyle",
         "type": "enum",
         "label": "Visualizer style",
-        "options": ["bars", "mirror", "wave", "scope", "dots", "led", "ring", "area"],
+        "options": [
+          "bars",
+          "mirror",
+          "wave",
+          "scope",
+          "dots",
+          "led",
+          "ring",
+          "area",
+          "peaks",
+          "capsules",
+          "steps",
+          "neon",
+          "lightning",
+          "heartbeat",
+          "ripple",
+          "helix",
+          "comet",
+          "stellar",
+          "meter",
+          "orb"
+        ],
         "defaultValue": "bars",
-        "description": "bars, mirror, wave (smooth blob), scope (real oscilloscope), dots, led (segmented meter), ring (radial) or area (filled mountain)."
+        "description": "bars, mirror, wave (smooth blob), scope (real oscilloscope), dots, led (segmented meter), ring (radial), area (filled mountain), peaks, capsules, steps, neon, lightning, heartbeat, ripple, helix, comet, stellar, meter or orb (pulsing sphere)."
       },
       {
         "key": "vizSide",
         "type": "enum",
         "label": "Visualizer position",
-        "options": ["left", "right", "both", "hidden"],
+        "options": [
+          "left",
+          "right",
+          "both",
+          "hidden"
+        ],
         "defaultValue": "left",
         "description": "Which side of the text the visualizer sits on. 'both' mirrors it on each side."
       },
@@ -96,7 +128,12 @@
         "key": "colorMode",
         "type": "enum",
         "label": "Color mode",
-        "options": ["theme", "fade", "rainbow", "custom"],
+        "options": [
+          "theme",
+          "fade",
+          "rainbow",
+          "custom"
+        ],
         "defaultValue": "theme",
         "description": "theme follows the bar foreground; fade ramps its opacity; rainbow shifts hue; custom uses the color below."
       },
@@ -111,7 +148,11 @@
         "key": "panelColor",
         "type": "enum",
         "label": "Settings panel colors",
-        "options": ["theme", "custom", "monochrome"],
+        "options": [
+          "theme",
+          "custom",
+          "monochrome"
+        ],
         "defaultValue": "theme",
         "description": "Colors of the settings panel itself: theme brings your Omarchy theme's accent and background into it, custom uses the accent below, monochrome keeps it neutral grey."
       },
@@ -156,7 +197,11 @@
         "key": "engine",
         "type": "enum",
         "label": "Spectrum engine",
-        "options": ["auto", "cava", "builtin"],
+        "options": [
+          "auto",
+          "cava",
+          "builtin"
+        ],
         "defaultValue": "auto",
         "description": "auto uses cava when installed and falls back to the built-in FFT. The scope style always uses its own capture."
       },
@@ -185,7 +230,12 @@
         "key": "textFormat",
         "type": "enum",
         "label": "Text format",
-        "options": ["artist-title", "title-artist", "title", "artist"],
+        "options": [
+          "artist-title",
+          "title-artist",
+          "title",
+          "artist"
+        ],
         "defaultValue": "artist-title",
         "description": "What the text shows and in which order."
       },
@@ -210,7 +260,12 @@
         "key": "scrollDirection",
         "type": "enum",
         "label": "Scroll direction",
-        "options": ["left", "right", "bounce", "off"],
+        "options": [
+          "left",
+          "right",
+          "bounce",
+          "off"
+        ],
         "defaultValue": "left",
         "description": "How text that does not fit moves: left, right, bounce back and forth, or off (truncate)."
       },
@@ -238,7 +293,11 @@
         "key": "textAlign",
         "type": "enum",
         "label": "Text alignment",
-        "options": ["left", "center", "right"],
+        "options": [
+          "left",
+          "center",
+          "right"
+        ],
         "defaultValue": "left",
         "description": "Alignment of text that fits without scrolling."
       },
@@ -253,7 +312,10 @@
         "key": "controlsSide",
         "type": "enum",
         "label": "Controls position",
-        "options": ["left", "right"],
+        "options": [
+          "left",
+          "right"
+        ],
         "defaultValue": "right",
         "description": "Which end of the widget holds the buttons."
       },
@@ -275,7 +337,12 @@
         "key": "coverSide",
         "type": "enum",
         "label": "Cover art on the bar",
-        "options": ["hidden", "left", "center", "right"],
+        "options": [
+          "hidden",
+          "left",
+          "center",
+          "right"
+        ],
         "defaultValue": "hidden",
         "description": "Show the song's cover (a note icon when there is none) on the bar. left: before everything, center: right before the text, right: after everything."
       },
@@ -293,7 +360,11 @@
         "key": "clickAction",
         "type": "enum",
         "label": "Click action",
-        "options": ["playPause", "next", "none"],
+        "options": [
+          "playPause",
+          "next",
+          "none"
+        ],
         "defaultValue": "playPause",
         "description": "Left click on the visualizer or text. Middle click always skips to the next track."
       },
@@ -301,7 +372,11 @@
         "key": "wheelAction",
         "type": "enum",
         "label": "Scroll wheel action",
-        "options": ["track", "style", "none"],
+        "options": [
+          "track",
+          "style",
+          "none"
+        ],
         "defaultValue": "track",
         "description": "track skips songs; style cycles the visualizer style until the shell restarts."
       },
