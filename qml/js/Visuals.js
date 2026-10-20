@@ -19,6 +19,10 @@
 .import "visuals/stellar.js" as Stellar
 .import "visuals/meter.js" as Meter
 .import "visuals/orb.js" as Orb
+.import "visuals/waterfall.js" as Waterfall
+.import "visuals/fountain.js" as Fountain
+.import "visuals/vinyl.js" as Vinyl
+.import "visuals/skyline.js" as Skyline
 
 // Every visualizer style, in the order the settings show them. Each one lives in its
 // own file under visuals/ (see CONTRIBUTING.md): adding a style is one new file and
@@ -44,7 +48,11 @@ var list = [
     Comet.visual,
     Stellar.visual,
     Meter.visual,
-    Orb.visual
+    Orb.visual,
+    Waterfall.visual,
+    Fountain.visual,
+    Vinyl.visual,
+    Skyline.visual
 ];
 
 var byKey = {};

@@ -86,10 +86,14 @@
           "comet",
           "stellar",
           "meter",
-          "orb"
+          "orb",
+          "waterfall",
+          "fountain",
+          "vinyl",
+          "skyline"
         ],
         "defaultValue": "bars",
-        "description": "bars, mirror, wave (smooth blob), scope (real oscilloscope), dots, led (segmented meter), ring (radial), area (filled mountain), peaks, capsules, steps, neon, lightning, heartbeat, ripple, helix, comet, stellar, meter or orb (pulsing sphere)."
+        "description": "bars, mirror, wave (smooth blob), scope (real oscilloscope), dots, led (segmented meter), ring (radial), area (filled mountain), peaks, capsules, steps, neon, lightning, heartbeat, ripple, helix, comet, stellar, meter, orb (pulsing sphere), waterfall (spectrogram), fountain (sparks), vinyl (turning record) or skyline (a city at night)."
       },
       {
         "key": "vizSide",
