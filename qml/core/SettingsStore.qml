@@ -12,7 +12,8 @@ Item {
     property string pluginId: "io.github.qempexe.omaudix"
     property string stateDir: (Quickshell.env("XDG_STATE_HOME")
         || Quickshell.env("HOME") + "/.local/state") + "/omarchy-omaudix"
-    property string path: stateDir + "/settings.json"
+    property string fileName: "settings.json"
+    property string path: stateDir + "/" + fileName
 
     property var values: ({})
     property bool loaded: false
@@ -48,6 +49,25 @@ Item {
         persist()
         changed()
         keyChanged(key)
+    }
+
+    // Several keys at once, written and announced once.
+    function setMany(obj) {
+        var next = {}
+        for (var k in values) next[k] = values[k]
+        var p = {}
+        if (!loaded && !pendingAll) for (var pk in pending) p[pk] = pending[pk]
+        for (var key in obj) {
+            var value = obj[key]
+            if (value === null || value === undefined) delete next[key]
+            else next[key] = value
+            if (!loaded && !pendingAll) p[key] = (value === undefined) ? null : value
+        }
+        values = next
+        if (!loaded && !pendingAll) pending = p
+        persist()
+        changed()
+        keyChanged("*")
     }
 
     function reset() {
