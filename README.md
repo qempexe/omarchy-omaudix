@@ -25,6 +25,9 @@ A now-playing widget for the Omarchy bar: live visualizer, fixed-width scrolling
   32 kinds of ends, 29 surfaces, 22 kinds of lines and 18 ornaments, from a plain capsule to a
   gilded cartouche. Its line and its gradient can follow your theme's window border, at the
   border's own angle.
+- **Effects**: a glow around the visualizer, a breathing or flat visualizer while nothing plays,
+  a cover and plate that move with the bass, and titles that fade or slide in when the song changes.
+- **Progress line**: a thin line under the title, on hover or always; click it to jump.
 - **Round covers that spin**: the cover can be square or round, and a round one turns like a record
   while the music plays, to the left or to the right.
 - **Settings panel colors**: the settings panel itself can `theme` (bring your Omarchy theme's
@@ -40,7 +43,7 @@ A now-playing widget for the Omarchy bar: live visualizer, fixed-width scrolling
   core at 30 fps). The scope style always uses its own capture.
 - **Tuning**: sensitivity, smoothing, frame rate, band count.
 - **Interactions**: left click (play/pause, next, or nothing), middle click next, mouse
-  wheel skips tracks *or* cycles the visualizer style live.
+  wheel skips tracks, changes the player's volume, or cycles the visualizer style.
 - **Player switcher**: the settings panel lists every MPRIS player (Spotify, YouTube Music in a
   browser, cliamp, radio apps...) with what each is playing. Picking one pauses the others and plays it; keep
   `Auto` to just follow whatever is playing. Players that all call themselves "mpv" (or a browser)
@@ -69,7 +72,7 @@ Every style, color mode, cover and placement can be mixed. A few of the many com
 
 ### Settings panel
 
-Ten tabs: **Looks**, **Player**, **Visual**, **Colors**, **Text**, **Cover**, **Shape**, **Surface**, **Edge** and **Behavior**. Every change applies at once and is saved. The search box looks through every tab (Ctrl+F), and **Changed only** lists what differs from the defaults.
+Twelve tabs: **Looks**, **Player**, **Visual**, **Colors**, **Text**, **Cover**, **Shape**, **Surface**, **Edge**, **Effects**, **Behavior** and **About**. Every change applies at once and is saved. The search box looks through every tab (Ctrl+F), and **Changed only** lists what differs from the defaults.
 
 **Looks** holds twelve ready made looks, one step of undo, and twelve places for looks of your own. A look covers the visual, its colors, the text, the cover and the plate; the player and the mouse settings stay as they are. Saved looks live in `looks.json`, so **Reset all** never touches them.
 
@@ -152,7 +155,7 @@ All of these appear in Omarchy's widget settings UI.
 | `coverSide` | hidden, left, center, right | hidden |
 | `coverSize` | 10-36 px | 16 |
 | `clickAction` | playPause, next, none | playPause |
-| `wheelAction` | track, style, none | track |
+| `wheelAction` | track, volume, style, none | track |
 | `showAlbumArt` | true / false (cover in the settings panel header) | true |
 
 Pasting into the settings text fields (separator, custom colors) reads at most 1024 bytes of the
