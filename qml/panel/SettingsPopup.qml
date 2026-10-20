@@ -817,6 +817,19 @@ PopupWindow {
                             pal: root.platePal
                         }
 
+                        // ---- About ---------------------------------------------------------
+                        AboutPage {
+                            visible: root.pageKind === "about"
+                            Layout.fillWidth: true
+                            Layout.preferredWidth: rowsCol.width
+                            Layout.maximumWidth: rowsCol.width
+                            Layout.topMargin: 8
+                            version: root.svc && root.svc.manifest && root.svc.manifest.version ? String(root.svc.manifest.version) : ""
+                            ink: root.ink
+                            accent: root.accent
+                            fontFamily: root.fontFamily
+                        }
+
                     // ---- Player tab ----------------------------------------------
                     ColumnLayout {
                         visible: root.query === "" && root.tabs[root.tab].kind === "players"
@@ -978,7 +991,7 @@ PopupWindow {
 
                         // ---- settings rows -------------------------------------------------
                         Repeater {
-                            model: root.pageKind === "looks" ? [] : root.rows
+                            model: root.pageKind === "looks" || root.pageKind === "about" ? [] : root.rows
 
                             delegate: ColumnLayout {
                                 id: entry

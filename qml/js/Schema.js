@@ -294,7 +294,8 @@ var tabs = [
               labels: { keep: "As I left it" },
               hint: "Start every session with one of your saved looks, whatever was changed the day before." }
         ] }
-    ] }
+    ] },
+    { key: "about", title: "About", kind: "about", groups: [] }
 ];
 
 // ---- every item, by key --------------------------------------------------------------
