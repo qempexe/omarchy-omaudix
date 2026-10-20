@@ -106,6 +106,8 @@ Item {
     property bool luaMissing: false
     readonly property var borderColors: luaBorder.colors.length > 0 ? luaBorder.colors
         : (confBorder.colors.length > 0 ? confBorder.colors : tomlBorder.colors)
+    readonly property real borderAngle: luaBorder.colors.length > 0 ? luaBorder.angle
+        : (confBorder.colors.length > 0 ? confBorder.angle : tomlBorder.angle)
     readonly property string themeDir: {
         try { return Color.currentThemePath ? String(Color.currentThemePath) : "" } catch (e) { return "" }
     }

@@ -3,8 +3,8 @@ import QtQuick.Layouts
 import "../js/Schema.js" as Schema
 
 // The Looks tab: ready made looks with one step of undo, and twelve places for
-// your own. A ready made look is the visual, its colors, the text and the cover;
-// a place of your own keeps every setting.
+// your own. A ready made look is the visual, its colors, the text, the cover and the
+// plate; a place of your own keeps every setting.
 ColumnLayout {
     id: root
 
@@ -17,6 +17,7 @@ ColumnLayout {
     property string fontFamily: ""
     property var levels: []
     property var colorCtx: ({})
+    property var pal: null
 
     spacing: 8
 
@@ -75,13 +76,14 @@ ColumnLayout {
         LookArt {
             visible: !tile.empty
             anchors.horizontalCenter: parent.horizontalCenter
-            y: 7
-            width: parent.width - 14
-            height: 20
+            y: 5
+            width: parent.width - 10
+            height: 24
             look: tile.look || ({})
             fg: root.fg
             levels: root.levels
             colorCtx: root.colorCtx
+            pal: root.pal
         }
         Text {
             textFormat: Text.PlainText
@@ -139,7 +141,7 @@ ColumnLayout {
         textFormat: Text.PlainText
         Layout.fillWidth: true
         Layout.maximumWidth: root.width
-        text: "Sets the visual, its colors, the text and the cover in one click. Anything can be changed afterwards."
+        text: "Sets the visual, its colors, the text, the cover and the plate in one click. Anything can be changed afterwards."
         color: root.ink
         opacity: 0.55
         font.family: root.fontFamily

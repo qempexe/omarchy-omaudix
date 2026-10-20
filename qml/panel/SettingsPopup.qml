@@ -312,6 +312,16 @@ PopupWindow {
         root.tab = (root.tab + d + root.tabs.length) % root.tabs.length
     }
 
+    // what the plate tiles are painted with
+    property color barBackground: "black"
+    readonly property var platePal: ({
+        bg: [root.barBackground.r * 255, root.barBackground.g * 255, root.barBackground.b * 255],
+        fg: [root.fg.r * 255, root.fg.g * 255, root.fg.b * 255],
+        ac: [root.themeAccent.r * 255, root.themeAccent.g * 255, root.themeAccent.b * 255],
+        border: root.borderColors,
+        borderAngle: root.svc ? root.svc.borderAngle : 0
+    })
+
     // the colors the color modes build from, for the previews and tiles
     readonly property color themeAccent: Color.accent
     readonly property var themeColors: root.svc ? root.svc.themePalette : []
@@ -804,6 +814,7 @@ PopupWindow {
                             fontFamily: root.fontFamily
                             levels: root.demoSpectrum
                             colorCtx: root.lookColors
+                            pal: root.platePal
                         }
 
                     // ---- Player tab ----------------------------------------------
@@ -1035,6 +1046,9 @@ PopupWindow {
                                     demoSpectrum: root.demoSpectrum
                                     demoScope: root.demoScope
 
+                                    styleKey: it.key
+                                    styleCfg: it.kind === "style" ? root.cfg : ({})
+                                    stylePal: it.kind === "style" ? root.platePal : null
                                     onEdited: function(v) { root.setValue(settingRow.it, v) }
                                     onClipboardPaste: function(target, maxBytes) { root.requestPaste(settingRow, target) }
                                 }

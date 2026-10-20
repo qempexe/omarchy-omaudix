@@ -2,6 +2,8 @@ import QtQuick
 import "../js/Draw.js" as Draw
 import "../js/Visuals.js" as Visuals
 import "../js/Colors.js" as Colors
+import "../js/Style.js" as PlateStyle
+import "../js/Paint.js" as Paint
 
 // A tiny picture of the widget wearing a look: its visual on the side it sits,
 // a hint of the title, and the cover when it shows. Used by the look tiles.
@@ -12,9 +14,10 @@ Canvas {
     property color fg: "white"
     property var levels: []
     property var colorCtx: ({})
+    property var pal: null             // the plate's colors: { bg, fg, ac, border, borderAngle }
 
     renderTarget: Canvas.Image
-    readonly property string key: JSON.stringify([look, colorCtx, String(fg), width, height])
+    readonly property string key: JSON.stringify([look, colorCtx, pal, String(fg), width, height])
     onKeyChanged: requestPaint()
     onVisibleChanged: if (visible) requestPaint()
 
@@ -39,8 +42,17 @@ Canvas {
         const ctx = getContext("2d")
         ctx.reset()
         const v = root.look || ({})
-        const W = width, H = height
+        let W = width, H = height
         if (W < 4 || H < 4) return
+        // the plate first, then everything that sits on it a little further in
+        if (v.plate === true && root.pal) {
+            const d = Object.assign({}, v, { radius: Math.min(typeof v.radius === "number" ? v.radius : 8, 6) })
+            if (d.shadow === "strong") d.shadow = "soft"
+            try { Paint.paint(ctx, PlateStyle.params(d, root.pal, W, H, 2, "top")) } catch (e) { }
+            ctx.save()
+            ctx.translate(9, 0)
+            W -= 18
+        } else ctx.save()
         const vh = Math.min(H, 14), vy = (H - vh) / 2
         const side = v.vizSide || "left"
         const left = side === "left" || side === "both", right = side === "right" || side === "both"
@@ -62,6 +74,7 @@ Canvas {
         const ro = !v.vizRightOrient || v.vizRightOrient === "auto" ? (side === "both" ? "mirrored" : "normal") : v.vizRightOrient
         if (right) { vizIn(ctx, x, vy, vw, vh, ro); x += vw + 4 }
         if (cover && v.coverSide === "right") drawCover(ctx, x, vy, vh)
+        ctx.restore()
     }
 
     function drawCover(ctx, x, y, s) {

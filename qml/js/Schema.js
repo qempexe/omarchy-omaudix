@@ -1,6 +1,7 @@
 .pragma library
 .import "Visuals.js" as Visuals
 .import "Colors.js" as Colors
+.import "Style.js" as Style
 
 // Every setting Omaudix has: where it shows in the settings panel, its options and its
 // default, plus the ready made looks. Plain functions, so they can be tested.
@@ -12,6 +13,7 @@
 
 var PALETTE = ["#7aa2f7", "#bb9af7", "#7dcfff", "#9ece6a", "#e0af68", "#ff9e64", "#f7768e", "#c0caf5"];
 var SLOTS = 12;
+var PLATE = [{ key: "plate", is: [true] }];
 var ORIENT = { normal: "Normal", flipped: "Upside down", mirrored: "Mirrored", turned: "Turned" };
 
 function lr(extra) {
@@ -155,6 +157,92 @@ var tabs = [
               hint: "Show the current cover in the header above." }
         ] }
     ] },
+    { key: "shape", title: "Shape", groups: [
+        { title: "Plate", items: [
+            { key: "plate", label: "A plate behind the widget", kind: "bool", fallback: false,
+              hint: "A shape of its own behind the visualizer, the text and the buttons. Everything on this tab, Surface and Edge is about it." },
+            { key: "plateColor", label: "Color", kind: "enum", fallback: "lifted",
+              options: ["lifted", "accent", "custom"], labels: { lifted: "A shade off the bar", accent: "Accent", custom: "Custom" },
+              hint: "What the plate is made of.", when: PLATE },
+            { key: "plateCustom", label: "Custom plate color", kind: "color", fallback: "#2a2320", presets: ["#2a2320", "#1a1b26", "#24283b", "#3b2a2a", "#2b3a2f", "#c8925a", "#7aa2f7", "#eadbc8"],
+              hint: "Pick one, or type a hex.", when: PLATE.concat([{ key: "plateColor", is: ["custom"] }]) },
+            { key: "plateOpacity", label: "Opacity", kind: "int", fallback: 85, min: 10, max: 100, step: 5,
+              hint: "Lower lets the bar show through.", when: PLATE },
+            { key: "plateHeight", label: "Height", kind: "int", fallback: 80, min: 40, max: 100, step: 5,
+              hint: "How much of the bar's height it takes, in percent.", when: PLATE },
+            { key: "platePad", label: "Room at the ends", kind: "int", fallback: 6, min: 0, max: 24, step: 1,
+              hint: "Space between the ends of the plate and what is on it.", when: PLATE }
+        ] },
+        { title: "Ends", items: [
+            { key: "ends", label: "Ends", kind: "style", fallback: "rounded",
+              options: Style.ends.options, labels: Style.ends.labels, abouts: Style.ends.abouts,
+              hint: "How the plate ends, left and right.", when: PLATE },
+            { key: "pointing", label: "Pointing", kind: "enum", fallback: "right",
+              options: ["right", "left", "both"], labels: lr({ both: "Both ways" }),
+              hint: "Which way ends that point, point.", when: PLATE.concat([{ key: "ends", is: Style.pointingEnds }]) },
+            { key: "flatSide", label: "Square corners", kind: "enum", fallback: "none",
+              options: ["none", "edge", "windows"], labels: { none: "None", edge: "Toward the edge", windows: "Toward the windows" },
+              hint: "Square off the corners on one side, so the plate sits flush.", when: PLATE },
+            { key: "radius", label: "Roundness", kind: "int", fallback: 8, min: 0, max: 16, step: 1,
+              hint: "How round the corners are.", when: PLATE.concat([{ key: "ends", is: ["rounded"] }]) }
+        ] }
+    ] },
+    { key: "surface", title: "Surface", groups: [
+        { title: "Made of", items: [
+            { key: "surface", label: "Surface", kind: "style", fallback: "filled",
+              options: Style.surfaces.options, labels: Style.surfaces.labels, abouts: Style.surfaces.abouts,
+              hint: "What the plate is made of.", when: PLATE },
+            { key: "fill", label: "Fill", kind: "enum", fallback: "solid",
+              options: ["solid", "gradient", "glass"], labels: { solid: "Solid", gradient: "Gradient", glass: "Glass" },
+              hint: "Glass adds a bright line along the top.", when: PLATE },
+            { key: "gradientTo", label: "Gradient into", kind: "enum", fallback: "accent",
+              options: ["accent", "lighter", "darker", "border"],
+              labels: { accent: "Accent", lighter: "Lighter", darker: "Darker", border: "Window border" },
+              hint: "Window border runs from its first color to its last.",
+              when: PLATE.concat([{ key: "fill", is: ["gradient"] }]) },
+            { key: "gradientAcross", label: "Gradient across", kind: "bool", fallback: false,
+              hint: "From the top down instead of left to right.", when: PLATE.concat([{ key: "fill", is: ["gradient"] }]) },
+            { key: "pattern", label: "Texture", kind: "enum", fallback: "none",
+              options: ["none", "stripes", "dots", "grid"], labels: { none: "None", stripes: "Stripes", dots: "Dots", grid: "Grid" },
+              hint: "A faint texture on top.", when: PLATE },
+            { key: "depth", label: "Depth", kind: "enum", fallback: "flat",
+              options: ["flat", "raised", "sunken"], labels: { flat: "Flat", raised: "Raised", sunken: "Sunken" },
+              hint: "Light and shade along its edges.", when: PLATE }
+        ] },
+        { title: "Shadow", items: [
+            { key: "shadow", label: "Shadow", kind: "enum", fallback: "none",
+              options: ["none", "soft", "strong"], labels: { none: "None", soft: "Soft", strong: "Strong" },
+              hint: "The bar is thin, so a shadow mostly shows at the ends.", when: PLATE },
+            { key: "shadowColor", label: "Shadow color", kind: "enum", fallback: "dark",
+              options: ["dark", "accent"], labels: { dark: "Dark", accent: "Accent glow" },
+              hint: "Accent turns the shadow into a glow.", when: PLATE.concat([{ key: "shadow", is: ["soft", "strong"] }]) }
+        ] }
+    ] },
+    { key: "edge", title: "Edge", groups: [
+        { title: "Lines", items: [
+            { key: "lines", label: "Lines", kind: "style", fallback: "solid",
+              options: Style.lines.options, labels: Style.lines.labels, abouts: Style.lines.abouts,
+              hint: "The plate's edge.", when: PLATE },
+            { key: "border", label: "Line color", kind: "enum", fallback: "subtle",
+              options: ["subtle", "text", "accent", "window"],
+              labels: { subtle: "Subtle", text: "Text", accent: "Accent", window: "Window border" },
+              hint: "Window border draws the line in your active window border's own gradient, at its angle.",
+              when: PLATE.concat([{ key: "lines", not: Style.colorlessLines }]) },
+            { key: "borderWidth", label: "Line width", kind: "int", fallback: 1, min: 1, max: 4, step: 1,
+              hint: "In pixels.", when: PLATE },
+            { key: "railSide", label: "Rail side", kind: "enum", fallback: "windows",
+              options: ["windows", "edge", "both"], labels: { windows: "Toward the windows", edge: "Toward the edge", both: "Both" },
+              hint: "Where a rail sits.", when: PLATE.concat([{ key: "lines", is: ["rail"] }]) },
+            { key: "outlineGradient", label: "Gradient lines", kind: "bool", fallback: false,
+              hint: "Lines fade into a lighter shade along the plate.",
+              when: PLATE.concat([{ key: "border", not: ["window"] }]) }
+        ] },
+        { title: "Ornaments", items: [
+            { key: "ornaments", label: "Ornaments", kind: "style", fallback: "none",
+              options: Style.ornaments.options, labels: Style.ornaments.labels, abouts: Style.ornaments.abouts,
+              hint: "Decoration on top of the plate.", when: PLATE }
+        ] }
+    ] },
     { key: "behavior", title: "Behavior", groups: [
         { title: "Buttons", items: [
             { key: "showControls", label: "Playback buttons", kind: "bool", fallback: true,
@@ -249,14 +337,16 @@ function resolve(shellSettings, local) {
 // is an item's row in effect with these values?
 function active(it, values) {
     if (!it.when) return true;
-    return it.when.every((c) => c.is.map(String).indexOf(String(values[c.key])) >= 0);
+    return it.when.every((c) => c.is ? c.is.map(String).indexOf(String(values[c.key])) >= 0
+                                     : c.not.map(String).indexOf(String(values[c.key])) < 0);
 }
 
 // ---- looks ------------------------------------------------------------------------------
-// A look is how the widget looks: the visual, its colors, the text and the cover. Which
+// A look is how the widget looks: the visual, its colors, the text, the cover and the
+// plate behind them. Which
 // player it follows and what the mouse does are left alone.
 
-var lookTabs = ["visual", "colors", "text", "cover"];
+var lookTabs = ["visual", "colors", "text", "cover", "shape", "surface", "edge"];
 var lookExclude = { engine: true, fps: true, panelColor: true, panelCustomColor: true, showAlbumArt: true };
 var lookKeys = [];
 for (var lk = 0; lk < items.length; lk++)
@@ -264,16 +354,34 @@ for (var lk = 0; lk < items.length; lk++)
 
 var looks = [
     { key: "classic", label: "Classic", set: {} },
-    { key: "studio", label: "Studio", set: { vizStyle: "led", barCount: 24, vizWidth: 84 } },
-    { key: "neon", label: "Neon", set: { vizStyle: "neon", colorMode: "rainbow", vizWidth: 96 } },
-    { key: "mirror", label: "Mirror", set: { vizStyle: "capsules", vizSide: "both", barCount: 28, colorMode: "fade" } },
-    { key: "waves", label: "Waves", set: { vizStyle: "wave", vizSide: "both", colorMode: "rainbow" } },
-    { key: "pulse", label: "Pulse", set: { vizStyle: "heartbeat", vizWidth: 110, colorMode: "custom", customColor: "#f7768e" } },
-    { key: "cosmos", label: "Cosmos", set: { vizStyle: "stellar", colorMode: "rainbow", vizWidth: 96 } },
-    { key: "orbit", label: "Orbit", set: { vizStyle: "ring", vizSide: "both", colorMode: "rainbow", coverSide: "center", coverSize: 18 } },
-    { key: "comet", label: "Comet", set: { vizStyle: "comet", vizWidth: 120, colorMode: "custom", customColor: "#e0af68" } },
-    { key: "scope", label: "Scope", set: { vizStyle: "scope", vizWidth: 96, colorMode: "custom", customColor: "#9ece6a" } },
-    { key: "helix", label: "Helix", set: { vizStyle: "helix", vizWidth: 110, colorMode: "rainbow" } },
+    { key: "studio", label: "Studio", set: { vizStyle: "led", barCount: 24, vizWidth: 84, plate: true, ends: "rounded", radius: 4,
+                                             surface: "metal", lines: "inset", border: "subtle", depth: "sunken" } },
+    { key: "pill", label: "Pill", set: { vizStyle: "capsules", vizSide: "both", barCount: 24, colorMode: "fade",
+                                         plate: true, ends: "capsule", lines: "solid", border: "subtle" } },
+    { key: "neon", label: "Neon", set: { vizStyle: "neon", colorMode: "rainbow", vizWidth: 96, plate: true, ends: "capsule",
+                                         surface: "faint", lines: "neon", border: "accent" } },
+    { key: "glass", label: "Glass", set: { vizStyle: "wave", vizSide: "both", colorMode: "palette", plate: true, ends: "capsule",
+                                           surface: "frost", fill: "glass", lines: "solid", border: "text" } },
+    { key: "aurora", label: "Aurora", set: { vizStyle: "area", vizWidth: 96, colorMode: "border", plate: true, ends: "capsule",
+                                             fill: "gradient", gradientTo: "border", lines: "solid", border: "window", borderWidth: 2 } },
+    { key: "vinyl", label: "Vinyl", set: { vizStyle: "vinyl", vizSide: "both", colorMode: "cover", coverSide: "center", coverSize: 20,
+                                           coverShape: "circle", coverSpin: "right" } },
+    { key: "pulse", label: "Pulse", set: { vizStyle: "heartbeat", vizWidth: 110, colorMode: "pulse", plate: true, ends: "arrow",
+                                           pointing: "both", lines: "solid", border: "accent" } },
+    { key: "cosmos", label: "Cosmos", set: { vizStyle: "stellar", colorMode: "rainbow", vizWidth: 96, plate: true, ends: "capsule",
+                                             surface: "nebula", lines: "glow", border: "accent", ornaments: "stars" } },
+    { key: "city", label: "City", set: { vizStyle: "skyline", vizWidth: 110, colorMode: "heat", plate: true, ends: "castle",
+                                         surface: "filled", lines: "solid", border: "subtle" } },
+    { key: "arcade", label: "Arcade", set: { vizStyle: "led", vizWidth: 84, colorMode: "heat", plate: true, ends: "castle",
+                                             surface: "crt", lines: "solid", border: "accent" } },
+    { key: "deco", label: "Deco", set: { vizStyle: "peaks", vizSide: "both", colorMode: "duotone", plate: true, ends: "plaque",
+                                         lines: "double", border: "accent", ornaments: "deco" } },
+    { key: "salon", label: "Salon", set: { vizStyle: "mirror", vizWidth: 84, colorMode: "fade", plate: true, ends: "cartouche",
+                                           surface: "velvet", lines: "gilded", ornaments: "rosettes", plateHeight: 90 } },
+    { key: "waterfall", label: "Waterfall", set: { vizStyle: "waterfall", vizWidth: 110, colorMode: "heat", plate: true, ends: "rounded",
+                                                   radius: 4, surface: "filled", lines: "none", depth: "sunken" } },
+    { key: "fountain", label: "Fountain", set: { vizStyle: "fountain", vizSide: "both", vizRightOrient: "mirrored", colorMode: "gradient",
+                                                 customColor: "#7dcfff", customColor2: "#bb9af7" } },
     { key: "minimal", label: "Minimal", set: { vizStyle: "meter", vizWidth: 48, textFormat: "title", scrollDirection: "bounce" } }
 ];
 var lookByKey = {};

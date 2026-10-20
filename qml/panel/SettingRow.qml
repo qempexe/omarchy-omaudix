@@ -2,6 +2,8 @@ import QtQuick
 import QtQuick.Layouts
 import "../bar"
 import "../js/Visuals.js" as Visuals
+import "../js/Style.js" as PlateStyle
+import "../js/Paint.js" as Paint
 
 // One setting in the popup: a label + plain-language hint on the left, the
 // current value / reset on the right, and a purpose-built control underneath.
@@ -33,6 +35,9 @@ Item {
     property var options: []
     property var labels: ({})          // option -> friendly text
     property var abouts: ({})          // option -> one line about it, shown for the picked one
+    property string styleKey: ""       // style tiles: which setting they change
+    property var styleCfg: ({})        // style tiles: every setting, so a tile shows the plate as it would become
+    property var stylePal: null        // style tiles: { bg, fg, ac, border, borderAngle }
     property var presets: []           // string chips / color palette
     property var value: null
     property var defaultValue: null
@@ -407,10 +412,91 @@ Item {
             }
         }
 
+        // style tiles: a little plate drawn the way that option draws it
+        GridLayout {
+            visible: root.kind === "style"
+            Layout.fillWidth: true
+            columns: 4
+            columnSpacing: 8
+            rowSpacing: 8
+
+            Repeater {
+                model: root.kind === "style" ? root.options : []
+                delegate: Rectangle {
+                    id: stile
+                    required property var modelData
+                    readonly property bool on: root.same(root.value, modelData)
+                    Layout.preferredWidth: Math.floor((root.width - 24) / 4)
+                    Layout.preferredHeight: 50
+                    radius: 8
+                    color: on ? root.accentTint(0.16) : (stileArea.containsMouse ? root.tint(0.10) : root.tint(0.05))
+                    border.width: on ? 1.5 : 1
+                    border.color: on ? root.accent : root.tint(0.10)
+                    Behavior on color { ColorAnimation { duration: 100 } }
+
+                    Canvas {
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        y: 5
+                        width: parent.width - 10
+                        height: 26
+                        renderTarget: Canvas.Image
+                        // the plate with this one option changed
+                        readonly property var cfgHere: {
+                            const out = Object.assign({}, root.styleCfg || ({}))
+                            out[root.styleKey] = stile.modelData
+                            out.radius = Math.min(typeof out.radius === "number" ? out.radius : 8, 7)
+                            if (out.shadow === "strong") out.shadow = "soft"
+                            return out
+                        }
+                        readonly property string key: JSON.stringify([cfgHere, root.stylePal, width, height])
+                        onKeyChanged: requestPaint()
+                        onVisibleChanged: if (visible) requestPaint()
+                        onPaint: {
+                            const ctx = getContext("2d")
+                            if (!root.stylePal) { ctx.reset(); return }
+                            const m = 4
+                            Paint.paint(ctx, PlateStyle.params(cfgHere, root.stylePal, width, height, m, "top"))
+                            // a few bars, so it reads as the widget
+                            const fg = root.barFg
+                            ctx.fillStyle = Qt.rgba(fg.r, fg.g, fg.b, 0.6)
+                            const hs = [0.4, 0.75, 0.55, 0.9, 0.5, 0.3]
+                            for (let i = 0; i < hs.length; i++) {
+                                const bh = hs[i] * 8
+                                ctx.fillRect(width / 2 - 11 + i * 4, height / 2 + 4 - bh, 2.5, bh)
+                            }
+                        }
+                    }
+
+                    Text {
+                        textFormat: Text.PlainText
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: parent.bottom
+                        anchors.bottomMargin: 5
+                        width: parent.width - 6
+                        horizontalAlignment: Text.AlignHCenter
+                        elide: Text.ElideRight
+                        text: root.labelFor(stile.modelData)
+                        color: root.fg
+                        opacity: stile.on ? 1.0 : 0.7
+                        font.family: root.fontFamily
+                        font.pixelSize: 8
+                        font.weight: stile.on ? Font.DemiBold : Font.Normal
+                    }
+                    MouseArea {
+                        id: stileArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.edited(stile.modelData)
+                    }
+                }
+            }
+        }
+
         // what the picked tile does
         Text {
             textFormat: Text.PlainText
-            visible: (root.kind === "viz" || root.kind === "colors") && text !== ""
+            visible: (root.kind === "viz" || root.kind === "colors" || root.kind === "style") && text !== ""
             Layout.fillWidth: true
             text: root.abouts && root.abouts[root.str(root.value)] ? root.labelFor(root.value) + ": " + root.abouts[root.str(root.value)] : ""
             color: root.fg

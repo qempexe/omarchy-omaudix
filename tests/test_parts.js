@@ -14,6 +14,8 @@ const Colors = load(js("Colors.js"));
 const Schema = load(js("Schema.js"));
 const Theme = load(js("Theme.js"));
 const Cover = load(js("Cover.js"));
+const Style = load(js("Style.js"));
+const Paint = load(js("Paint.js"));
 const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "manifest.json"), "utf8"));
 const schemaOf = (key) => manifest.barWidget.schema.find((s) => s.key === key);
 
@@ -235,6 +237,44 @@ test("cover colors: the main colors of a picture, distinct, and never too dark",
     assert.ok(out[1][2] > 150, "blue second");
     for (const c of out) assert.ok((0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]) / 255 >= 0.27);
     assert.strictEqual(Cover.colorsOf([], 3).length, 0);
+});
+
+test("every plate part paints cleanly, on every side of the screen", () => {
+    const pal = { bg: [18, 11, 9], fg: [234, 219, 200], ac: [200, 146, 90], border: ["#e0b25c", "#c27aa0"], borderAngle: 45 };
+    const base = Schema.defaults();
+    base.plate = true;
+    const tries = [];
+    for (const e of Style.ends.options) for (const p of ["right", "both"]) tries.push({ ends: e, pointing: p });
+    for (const sfc of Style.surfaces.options) tries.push({ surface: sfc, fill: "gradient" });
+    for (const l of Style.lines.options) for (const b of ["subtle", "window"]) tries.push({ lines: l, border: b, outlineGradient: true });
+    for (const o of Style.ornaments.options) tries.push({ ornaments: o, ends: "capsule" });
+    tries.push({ shadow: "strong", shadowColor: "accent", depth: "raised", pattern: "grid", fill: "glass" });
+    for (const t of tries) for (const edge of ["top", "bottom", "left", "right"]) {
+        const d = Object.assign({}, base, t);
+        const v = Style.isVertical(edge);
+        const ctx = mockCtx();
+        Paint.paint(ctx, Style.params(d, pal, v ? 30 : 260, v ? 260 : 30, 4, edge));
+        assert.deepStrictEqual(ctx.bad, [], JSON.stringify(t) + " " + edge);
+    }
+});
+
+test("ends leave room for what sits on the plate, never too much", () => {
+    for (const e of Style.ends.options) {
+        const d = Object.assign(Schema.defaults(), { plate: true, ends: e });
+        const r = Style.endRoom(d, 21, 3);
+        assert.ok(r >= 0 && r < 21 * 1.4, e + " " + r);
+    }
+    assert.strictEqual(Style.endRoom(Object.assign(Schema.defaults(), { ends: "rounded" }), 21, 3), 0);
+    assert.ok(Style.endRoom(Object.assign(Schema.defaults(), { ends: "capsule", ornaments: "crown" }), 21, 3) > 10);
+});
+
+test("window border lines take the border's colors and angle", () => {
+    const pal = { bg: [18, 11, 9], fg: [234, 219, 200], ac: [200, 146, 90], border: ["#e0b25c", "#c27aa0"], borderAngle: 45 };
+    const p = Style.params(Object.assign(Schema.defaults(), { plate: true, border: "window", lines: "solid" }), pal, 200, 30, 4, "top");
+    assert.strictEqual(p.lineGrad.length, 2);
+    assert.strictEqual(p.lineAngle, 45);
+    const q = Style.params(Object.assign(Schema.defaults(), { plate: true, border: "window" }), Object.assign({}, pal, { border: [] }), 200, 30, 4, "top");
+    assert.strictEqual(q.lineGrad.length, 0, "no border colors: a plain line");
 });
 
 console.log(passed + " passed");

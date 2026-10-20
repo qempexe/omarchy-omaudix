@@ -7,6 +7,7 @@ import "panel"
 import "js/Visuals.js" as Visuals
 import "js/Schema.js" as Schema
 import "js/Cover.js" as CoverColors
+import "js/Style.js" as PlateStyle
 
 BarWidget {
     id: root
@@ -50,11 +51,50 @@ BarWidget {
         return cfg.textFormat === "title-artist" ? t + sep + a : a + sep + t
     }
 
+    // ---- the plate ------------------------------------------------------------------
+    function rgbOf(c) { return [c.r * 255, c.g * 255, c.b * 255] }
+    // the bar's own color: what the bar says, else the theme's bar color
+    readonly property color barColor: {
+        if (bar && bar.barBackground !== undefined && bar.barBackground !== null) return bar.barBackground
+        try { if (Color.bar && Color.bar.background !== undefined) return Color.bar.background } catch (e) { }
+        return Color.background
+    }
+    readonly property bool plateOn: cfg.plate === true
+    readonly property string barEdge: {
+        const p = bar ? String(bar.position || "") : ""
+        return ["top", "bottom", "left", "right"].indexOf(p) >= 0 ? p : (vertical ? "left" : "top")
+    }
+    // across the bar: a share of its thickness; along it: the content, its room and
+    // whatever the ends take
+    readonly property real plateThick: Math.max(12, Math.round(barSize * cfg.plateHeight / 100))
+    readonly property real plateRoom: plateOn
+        ? cfg.platePad + PlateStyle.endRoom(cfg, plateThick, Math.max(1, (plateThick - vizHeight) / 2)) : 0
+    readonly property real contentLength: vertical ? verticalContent.implicitHeight : horizontalContent.implicitWidth
+    readonly property real plateLength: contentLength + 2 * plateRoom + Style.space(4)
+
     visible: shouldShow
     implicitWidth: shouldShow
-        ? (vertical ? barSize : horizontalContent.implicitWidth + Style.space(10)) : 0
+        ? (vertical ? barSize : (plateOn ? plateLength + Style.space(4) : horizontalContent.implicitWidth + Style.space(10))) : 0
     implicitHeight: shouldShow
-        ? (vertical ? verticalContent.implicitHeight + Style.space(10) : barSize) : 0
+        ? (vertical ? (plateOn ? plateLength + Style.space(4) : verticalContent.implicitHeight + Style.space(10)) : barSize) : 0
+
+    Plate {
+        visible: root.plateOn
+        z: -1
+        x: (root.width - width) / 2
+        y: (root.height - height) / 2
+        cfg: root.cfg
+        edge: root.barEdge
+        plateWidth: root.plateLength
+        plateHeight: root.plateThick
+        room: Math.floor((root.barSize - root.plateThick) / 2)
+        pal: ({
+            bg: root.rgbOf(root.barColor),
+            fg: root.rgbOf(root.fg), ac: root.rgbOf(root.accent),
+            border: root.service ? root.service.borderColors : [],
+            borderAngle: root.service ? root.service.borderAngle : 0
+        })
+    }
 
     // ---- talk to the shared service ------------------------------------------
     readonly property bool wantsViz: shouldShow && cfg.vizSide !== "hidden"
@@ -418,6 +458,7 @@ BarWidget {
         barObject: root.bar
         vertical: root.vertical
         fg: root.fg
+        barBackground: root.barColor
         fontFamily: root.fontName
     }
 }
