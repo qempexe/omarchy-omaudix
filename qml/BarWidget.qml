@@ -2,6 +2,9 @@ import QtQuick
 import Quickshell
 import qs.Commons
 import qs.Ui
+import "core"
+import "bar"
+import "panel"
 
 BarWidget {
     id: root

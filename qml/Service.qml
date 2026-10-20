@@ -287,7 +287,7 @@ Item {
             return source.replace(/\/+$/, "")
         return Quickshell.env("HOME") + "/.config/omarchy/plugins/" + pluginId
     }
-    readonly property string helperPath: pluginSourceDir + "/viz.py"
+    readonly property string helperPath: pluginSourceDir + "/helper/viz.py"
     readonly property string pythonPath: "/usr/bin/python3"
 
     function register() { consumerCount = consumerCount + 1 }

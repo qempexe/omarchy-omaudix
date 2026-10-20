@@ -20,14 +20,14 @@ class ManifestTests(unittest.TestCase):
             self.assertTrue(os.path.isfile(os.path.join(ROOT, rel)), rel)
 
     def test_settings_drift(self):
-        qml = read("BarWidget.qml")
+        qml = read("qml/BarWidget.qml")
         used = set(re.findall(r'setting\("([A-Za-z0-9_]+)"', qml))
         schema = {s["key"] for s in self.bw["schema"]}
         self.assertEqual(used, schema)
         self.assertEqual(set(self.bw["defaults"]), schema)
 
     def test_defaults_match_schema_and_qml_fallbacks(self):
-        qml = read("BarWidget.qml")
+        qml = read("qml/BarWidget.qml")
         for s in self.bw["schema"]:
             self.assertEqual(self.bw["defaults"][s["key"]], s["defaultValue"], s["key"])
             m = re.search(r'setting\("%s", ([^)]+)\)' % s["key"], qml)
@@ -39,7 +39,7 @@ class ManifestTests(unittest.TestCase):
                 self.assertTrue(s["min"] <= s["defaultValue"] <= s["max"])
 
     def test_qml_choice_lists_match_manifest_options(self):
-        qml = read("BarWidget.qml")
+        qml = read("qml/BarWidget.qml")
         for s in self.bw["schema"]:
             if s["type"] != "enum":
                 continue
@@ -57,7 +57,7 @@ class ManifestTests(unittest.TestCase):
             self.assertEqual(opts, s["options"], s["key"])
 
     def test_service_style_names_match(self):
-        svc = read("Service.qml")
+        svc = read("qml/Service.qml")
         opts = json.loads(re.search(r'styleNames: (\[[^\]]*\])', svc).group(1))
         style = next(s for s in self.bw["schema"] if s["key"] == "vizStyle")
         self.assertEqual(opts, style["options"])
@@ -66,7 +66,7 @@ class ManifestTests(unittest.TestCase):
         return next(s for s in self.bw["schema"] if s["key"] == "vizStyle")["options"]
 
     def test_popup_style_list_and_labels_match_manifest(self):
-        popup = read("SettingsPopup.qml")
+        popup = read("qml/panel/SettingsPopup.qml")
         block = re.search(r'key: "vizStyle".*?hint:', popup, re.S).group(0)
         opts = json.loads(re.search(r'options: (\[[^\]]*\])', block).group(1))
         self.assertEqual(opts, self.style_options())
@@ -74,13 +74,15 @@ class ManifestTests(unittest.TestCase):
         self.assertEqual(set(re.findall(r'(\w+): "', labels)), set(opts))
 
     def test_visualizer_draws_every_style(self):
-        drawn = re.findall(r'case "([a-z]+)":', read("Visualizer.qml"))
+        drawn = re.findall(r'case "([a-z]+)":', read("qml/bar/Visualizer.qml"))
         self.assertEqual(sorted(drawn), sorted(self.style_options()))
 
     def test_every_text_item_is_plain_text(self):
         """MPRIS metadata is attacker-controlled: Text.AutoText would render
         <img src=...> and fetch remote URLs. Every Text item must pin PlainText."""
-        for name in sorted(f for f in os.listdir(ROOT) if f.endswith(".qml")):
+        names = sorted(os.path.relpath(os.path.join(d, f), ROOT)
+                       for d, _, fs in os.walk(os.path.join(ROOT, "qml")) for f in fs if f.endswith(".qml"))
+        for name in names:
             lines = read(name).split("\n")
             for i, line in enumerate(lines):
                 if not re.match(r"^\s*(?:[\w.]+:\s*)?Text \{\s*$", line):

@@ -11,7 +11,7 @@ import unittest
 from array import array
 from contextlib import redirect_stdout
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "helper"))
 import viz  # noqa: E402
 
 

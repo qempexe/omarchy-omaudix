@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import "../bar"
 
 // One setting in the popup: a label + plain-language hint on the left, the
 // current value / reset on the right, and a purpose-built control underneath.

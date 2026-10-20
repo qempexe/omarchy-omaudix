@@ -54,7 +54,7 @@ A now-playing widget for the Omarchy bar: live visualizer, fixed-width scrolling
 
 Every style, color mode, cover and placement can be mixed. A few of the many combinations:
 
-![Omaudix bar combinations](combos.png)
+![Omaudix bar combinations](screenshots/combos.png)
 
 ... and many, many more combinations!
 
@@ -62,11 +62,11 @@ Every style, color mode, cover and placement can be mixed. A few of the many com
 
 Five tabs, all changes apply instantly and are saved. **Look** picks the style, placement, width and colors:
 
-![Omaudix settings: Look](settings-look.png)
+![Omaudix settings: Look](screenshots/settings-look.png)
 
 **Player**, **Response**, **Text** and **Behavior** (left to right):
 
-![Omaudix settings: Player, Response, Text, Behavior](settings-tabs.png)
+![Omaudix settings: Player, Response, Text, Behavior](screenshots/settings-tabs.png)
 
 ## Requirements
 
@@ -163,10 +163,12 @@ omarchy-shell io.github.qempexe.omaudix playPause | next | previous
 ## How it works
 
 ```
-Service.qml  -- reads the active MPRIS player (Quickshell.Services.Mpris), owns ONE helper process
-  viz.py     -- cava (or built-in FFT over pw-record) / oscilloscope -> one text frame per line
-BarWidget.qml -- layout, settings, clicks; Controls.qml, Visualizer.qml, MarqueeText.qml
-SettingsPopup.qml / SettingRow.qml / SettingsStore.qml -- the settings panel and its saved overrides
+qml/Service.qml        -- reads the active MPRIS player (Quickshell.Services.Mpris), owns ONE helper process
+helper/viz.py          -- cava (or built-in FFT over pw-record) / oscilloscope -> one text frame per line
+qml/BarWidget.qml      -- layout, settings, clicks
+qml/bar/               -- Controls, Cover, MarqueeText, Visualizer
+qml/panel/             -- SettingsPopup, SettingRow: the settings panel
+qml/core/SettingsStore -- the saved overrides
 ```
 
 The visualizer reacts to your **system output** (default sink monitor), not to one specific

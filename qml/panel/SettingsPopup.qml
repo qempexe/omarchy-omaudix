@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Io
 import qs.Commons
+import "../bar"
 
 // Floating settings panel for Omaudix.
 //
