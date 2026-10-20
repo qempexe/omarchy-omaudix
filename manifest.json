@@ -447,11 +447,12 @@
         "label": "Scroll wheel action",
         "options": [
           "track",
+          "volume",
           "style",
           "none"
         ],
         "defaultValue": "track",
-        "description": "track skips songs; style cycles the visualizer style until the shell restarts."
+        "description": "track skips songs; volume changes the player's volume; style cycles the visualizer style."
       },
       {
         "key": "showAlbumArt",

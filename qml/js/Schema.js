@@ -243,6 +243,31 @@ var tabs = [
               hint: "Decoration on top of the plate.", when: PLATE }
         ] }
     ] },
+    { key: "effects", title: "Effects", groups: [
+        { title: "Visualizer", items: [
+            { key: "vizGlow", label: "Glow", kind: "enum", fallback: "none",
+              options: ["none", "soft", "strong"], labels: { none: "None", soft: "Soft", strong: "Strong" },
+              hint: "A halo around the visualizer, in its own colors." },
+            { key: "idleMode", label: "While nothing plays", kind: "enum", fallback: "still",
+              options: ["still", "breathe", "line"], labels: { still: "Still", breathe: "Breathe", line: "A thin line" },
+              hint: "Breathe moves it gently, so the widget never looks switched off." }
+        ] },
+        { title: "On the beat", items: [
+            { key: "beat", label: "Moves with the bass", kind: "enum", fallback: "off",
+              options: ["off", "cover", "plate", "both"], labels: { off: "Off", cover: "Cover", plate: "Plate", both: "Both" },
+              hint: "The cover swells a little and the plate brightens on every beat." }
+        ] },
+        { title: "Song changes", items: [
+            { key: "textChange", label: "New song", kind: "enum", fallback: "none",
+              options: ["none", "fade", "slide"], labels: { none: "Just change", fade: "Fade in", slide: "Slide in" },
+              hint: "How the title arrives when the song changes." }
+        ] },
+        { title: "Progress", items: [
+            { key: "seekBar", label: "Progress line", kind: "enum", fallback: "off",
+              options: ["off", "hover", "always"], labels: { off: "Off", hover: "On hover", always: "Always" },
+              hint: "A thin line under the title showing how far the song is. Click it to jump, when the player allows it." }
+        ] }
+    ] },
     { key: "behavior", title: "Behavior", groups: [
         { title: "Buttons", items: [
             { key: "showControls", label: "Playback buttons", kind: "bool", fallback: true,
@@ -257,8 +282,9 @@ var tabs = [
               options: ["playPause", "next", "none"], labels: { playPause: "Play / Pause", next: "Next track", none: "Nothing" },
               hint: "On the visualizer or text. Middle click always skips." },
             { key: "wheelAction", label: "Scroll wheel", kind: "enum", fallback: "track",
-              options: ["track", "style", "none"], labels: { track: "Skip tracks", style: "Change style", none: "Nothing" },
-              hint: "Style changes are saved as you scroll." }
+              options: ["track", "volume", "style", "none"],
+              labels: { track: "Skip tracks", volume: "Volume", style: "Change style", none: "Nothing" },
+              hint: "Volume changes the player's own volume, when it has one. Style changes are saved as you scroll." }
         ] },
         { title: "Showing", items: [
             { key: "hideWhenPaused", label: "Hide when paused", kind: "bool", fallback: false,
@@ -346,8 +372,8 @@ function active(it, values) {
 // plate behind them. Which
 // player it follows and what the mouse does are left alone.
 
-var lookTabs = ["visual", "colors", "text", "cover", "shape", "surface", "edge"];
-var lookExclude = { engine: true, fps: true, panelColor: true, panelCustomColor: true, showAlbumArt: true };
+var lookTabs = ["visual", "colors", "text", "cover", "shape", "surface", "edge", "effects"];
+var lookExclude = { engine: true, fps: true, panelColor: true, panelCustomColor: true, showAlbumArt: true, seekBar: true };
 var lookKeys = [];
 for (var lk = 0; lk < items.length; lk++)
     if (lookTabs.indexOf(items[lk].tab) >= 0 && !lookExclude[items[lk].key]) lookKeys.push(items[lk].key);

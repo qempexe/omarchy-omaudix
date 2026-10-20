@@ -434,6 +434,18 @@ Item {
         return s.length > 300 ? s.substring(0, 300) : s
     }
 
+    // the player's own volume, when it has one
+    function nudgeVolume(step) {
+        if (!player) return false
+        try {
+            if (player.volumeSupported === false) return false
+            player.volume = Math.max(0, Math.min(1, (Number(player.volume) || 0) + step))
+            return true
+        } catch (e) {
+            return false
+        }
+    }
+
     function runAction(action) {
         if (!player) return false
         try {

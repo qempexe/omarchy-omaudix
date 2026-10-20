@@ -51,6 +51,84 @@ BarWidget {
         return cfg.textFormat === "title-artist" ? t + sep + a : a + sep + t
     }
 
+    // ---- effects ----------------------------------------------------------------------
+    // While nothing plays the visualizer can stay still, breathe, or show a thin line.
+    readonly property bool idle: !playing
+    property var idleLevels: []
+    Timer {
+        interval: 80
+        repeat: true
+        running: root.shouldShow && root.idle && root.cfg.idleMode === "breathe"
+        property real t: 0
+        onTriggered: {
+            t += 0.08
+            const scope = Visuals.isScope(root.effStyle), out = []
+            for (let i = 0; i < 20; i++)
+                out.push(scope ? 0.22 * Math.sin(t * 2 + i * 0.35) * (0.6 + 0.4 * Math.sin(t))
+                               : 0.1 + 0.08 * (1 + Math.sin(t + i * 0.45)) * (0.7 + 0.3 * Math.sin(t * 0.6)))
+            root.idleLevels = out
+        }
+    }
+    readonly property var vizLevels: {
+        const live = service ? service.levels : []
+        if (!idle) return live
+        if (cfg.idleMode === "breathe") return idleLevels
+        if (cfg.idleMode === "line") {
+            const out = []
+            for (let i = 0; i < 20; i++) out.push(Visuals.isScope(effStyle) ? 0 : 0.05)
+            return out
+        }
+        return live
+    }
+
+    // the low end, for the cover and the plate to move with
+    readonly property bool beatCover: cfg.beat === "cover" || cfg.beat === "both"
+    readonly property bool beatPlate: cfg.beat === "plate" || cfg.beat === "both"
+    property real bass: 0
+    readonly property real bassNow: {
+        if (cfg.beat === "off" || !playing) return 0
+        const l = service ? service.levels : []
+        const q = Math.max(1, Math.floor(l.length / 4))
+        let sum = 0
+        for (let i = 0; i < q && i < l.length; i++) sum += Math.abs(l[i])
+        return Math.min(1, sum / q * 1.3)
+    }
+    onBassNowChanged: bass = bassNow
+    Behavior on bass { NumberAnimation { duration: 90 } }
+
+    // where the song is, for the progress line
+    property real position: 0
+    readonly property real songLength: {
+        const p = service ? service.player : null
+        try { return p && p.lengthSupported !== false && Number(p.length) > 0 ? Number(p.length) : 0 } catch (e) { return 0 }
+    }
+    readonly property bool seekShown: cfg.seekBar === "always" || (cfg.seekBar === "hover" && mediaMouse.containsMouse)
+    function readPosition() {
+        const p = service ? service.player : null
+        if (!p) { position = 0; return }
+        try {
+            // the player only reports its position when asked
+            if (typeof p.positionChanged === "function") p.positionChanged()
+            position = Number(p.position) || 0
+        } catch (e) { position = 0 }
+    }
+    Timer {
+        interval: 1000
+        repeat: true
+        triggeredOnStart: true
+        running: root.shouldShow && root.cfg.seekBar !== "off" && root.songLength > 0 && (root.playing || root.seekShown)
+        onTriggered: root.readPosition()
+    }
+    function seekTo(frac) {
+        const p = service ? service.player : null
+        if (!p || !(songLength > 0)) return
+        try {
+            if (p.canSeek === false) return
+            p.position = Math.max(0, Math.min(1, frac)) * songLength
+            readPosition()
+        } catch (e) { }
+    }
+
     // ---- the plate ------------------------------------------------------------------
     function rgbOf(c) { return [c.r * 255, c.g * 255, c.b * 255] }
     // the bar's own color: what the bar says, else the theme's bar color
@@ -80,6 +158,7 @@ BarWidget {
 
     Plate {
         visible: root.plateOn
+        opacity: root.beatPlate ? 0.7 + 0.3 * root.bass : 1
         z: -1
         x: (root.width - width) / 2
         y: (root.height - height) / 2
@@ -199,6 +278,7 @@ BarWidget {
                     spin: root.cfg.coverSpin
                     spinTime: root.cfg.spinTime
                     playing: root.playing
+                    scale: root.beatCover ? 1 + 0.14 * root.bass : 1
                     visible: root.cfg.coverSide === "left"
                     anchors.verticalCenter: parent.verticalCenter
                 }
@@ -206,7 +286,8 @@ BarWidget {
                 Visualizer {
                     width: root.vizItemWidth
                     height: root.vizHeight
-                    levels: root.service ? root.service.levels : []
+                    levels: root.vizLevels
+                    glow: root.cfg.vizGlow
                     vizStyle: root.effStyle
                     colorMode: root.cfg.colorMode
                     customColor: root.cfg.customColor
@@ -231,6 +312,7 @@ BarWidget {
                     spin: root.cfg.coverSpin
                     spinTime: root.cfg.spinTime
                     playing: root.playing
+                    scale: root.beatCover ? 1 + 0.14 * root.bass : 1
                     visible: root.cfg.coverSide === "center"
                     anchors.verticalCenter: parent.verticalCenter
                 }
@@ -238,6 +320,7 @@ BarWidget {
                 MarqueeText {
                     id: marquee
                     visible: root.cfg.showText
+                    transform: Translate { id: slideIn }
                     // compact: only as wide as the title, up to textWidth;
                     // longer titles fill textWidth and scroll as before
                     width: !root.cfg.showText ? 0
@@ -257,7 +340,8 @@ BarWidget {
                 Visualizer {
                     width: root.vizItemWidth
                     height: root.vizHeight
-                    levels: root.service ? root.service.levels : []
+                    levels: root.vizLevels
+                    glow: root.cfg.vizGlow
                     vizStyle: root.effStyle
                     colorMode: root.cfg.colorMode
                     customColor: root.cfg.customColor
@@ -282,12 +366,14 @@ BarWidget {
                     spin: root.cfg.coverSpin
                     spinTime: root.cfg.spinTime
                     playing: root.playing
+                    scale: root.beatCover ? 1 + 0.14 * root.bass : 1
                     visible: root.cfg.coverSide === "right"
                     anchors.verticalCenter: parent.verticalCenter
                 }
             }
 
             MouseArea {
+                id: mediaMouse
                 anchors.fill: parent
                 hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
@@ -308,11 +394,43 @@ BarWidget {
                     if (!root.service || root.cfg.wheelAction === "none") return
                     const up = wheel.angleDelta.y > 0
                     if (root.cfg.wheelAction === "style") root.stepStyle(up ? -1 : 1)
+                    else if (root.cfg.wheelAction === "volume") root.service.nudgeVolume(up ? 0.05 : -0.05)
                     else root.service.runAction(up ? "previous" : "next")
                 }
 
                 onEntered: if (root.bar) root.bar.showTooltip(root, root.tooltipLine())
                 onExited: if (root.bar) root.bar.hideTooltip(root)
+            }
+
+            // the progress line under the title; a click on it jumps there
+            Item {
+                id: seekLine
+                visible: root.seekShown && root.cfg.showText && root.songLength > 0
+                x: mediaRow.x + marquee.x
+                width: marquee.width
+                height: 6
+                y: mediaRow.y + marquee.y + marquee.height - 1
+                Rectangle {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: parent.width
+                    height: 2
+                    radius: 1
+                    color: Qt.rgba(root.fg.r, root.fg.g, root.fg.b, 0.18)
+                    Rectangle {
+                        width: parent.width * Math.max(0, Math.min(1, root.position / Math.max(1, root.songLength)))
+                        height: parent.height
+                        radius: 1
+                        color: root.accent
+                    }
+                }
+                MouseArea {
+                    anchors.fill: parent
+                    anchors.topMargin: -2
+                    anchors.bottomMargin: -2
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: function(mouse) { root.seekTo(mouse.x / Math.max(1, width)) }
+                }
             }
         }
 
@@ -382,7 +500,8 @@ BarWidget {
                 width: parent.height
                 height: parent.width
                 rotation: 90
-                levels: root.service ? root.service.levels : []
+                levels: root.vizLevels
+                glow: root.cfg.vizGlow
                 vizStyle: root.effStyle
                 orient: root.cfg.vizLeftOrient
                 colorMode: root.cfg.colorMode
@@ -418,6 +537,18 @@ BarWidget {
                 settingsPopup.toggle()
             }
         }
+    }
+
+    // a new song: the title fades or slides in
+    ParallelAnimation {
+        id: arrive
+        NumberAnimation { target: marquee; property: "opacity"; from: 0; to: 1; duration: 320; easing.type: Easing.OutCubic }
+        NumberAnimation { target: slideIn; property: "x"; from: root.cfg.textChange === "slide" ? 14 : 0; to: 0; duration: 320; easing.type: Easing.OutCubic }
+    }
+    property string lastTitle: ""
+    onLabelChanged: {
+        if (cfg.textChange !== "none" && lastTitle !== "" && label !== lastTitle) arrive.restart()
+        lastTitle = label
     }
 
     // ---- the cover's colors ------------------------------------------------------
