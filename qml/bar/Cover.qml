@@ -107,8 +107,10 @@ Item {
         turn.stop()
         if (!root.spinning) { disc.rotation = 0; return }
         const way = root.spin === "left" ? -1 : 1
-        turn.from = 0
-        turn.to = 360 * way
+        // carry on from where the cover is, so a new direction or speed never jumps
+        const at = ((disc.rotation % 360) + 360) % 360
+        turn.from = at
+        turn.to = at + 360 * way
         turn.duration = Math.max(2, root.spinTime) * 1000
         turn.start()
     }
