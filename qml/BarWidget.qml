@@ -2,11 +2,10 @@ import QtQuick
 import Quickshell
 import qs.Commons
 import qs.Ui
-import "core"
 import "bar"
 import "panel"
 import "js/Visuals.js" as Visuals
-import "js/Colors.js" as Colors
+import "js/Schema.js" as Schema
 
 BarWidget {
     id: root
@@ -17,94 +16,33 @@ BarWidget {
     readonly property bool hasMedia: service ? service.hasMedia : false
     readonly property bool playing: service ? service.playing : false
 
-    // ---- local settings overrides (popup) ----------------------------------
-    SettingsStore { id: settingsStore }
-
-    // Local override wins over `omarchy bar set`/manifest.
-    function over(key, fallback) {
-        var v = settingsStore.get(key)
-        return v === null ? fallback : v
-    }
-
-    // ---- settings: every key read here is declared in manifest.json --------
-    readonly property var styleChoices: Visuals.keys
-
-    readonly property string styleSetting: pick(over("vizStyle", setting("vizStyle", "bars")), styleChoices, "bars")
-    readonly property string vizSide: pick(over("vizSide", setting("vizSide", "left")), ["left", "right", "both", "hidden"], "left")
-    readonly property int vizWidth: whole(over("vizWidth", setting("vizWidth", 72)), 24, 240, 72)
-    readonly property int barCount: whole(over("barCount", setting("barCount", 20)), 6, 64, 20)
-    readonly property string colorMode: pick(over("colorMode", setting("colorMode", "theme")), Colors.keys, "theme")
-    readonly property string customColor: String(over("customColor", setting("customColor", "#7aa2f7")))
-    readonly property string panelColor: pick(over("panelColor", setting("panelColor", "theme")), ["theme", "custom", "monochrome"], "theme")
-    readonly property string panelCustomColor: String(over("panelCustomColor", setting("panelCustomColor", "#7aa2f7")))
-    readonly property int sensitivity: whole(over("sensitivity", setting("sensitivity", 100)), 25, 400, 100)
-    readonly property int smoothing: whole(over("smoothing", setting("smoothing", 60)), 0, 100, 60)
-    readonly property int fps: whole(over("fps", setting("fps", 30)), 15, 60, 30)
-    readonly property string engine: pick(over("engine", setting("engine", "auto")), ["auto", "cava", "builtin"], "auto")
-
-    readonly property bool showText: flag(over("showText", setting("showText", true)), true)
-    readonly property string textFormat: pick(over("textFormat", setting("textFormat", "artist-title")), ["artist-title", "title-artist", "title", "artist"], "artist-title")
-    readonly property string separator: String(over("separator", setting("separator", " - ")))
-    readonly property int textWidth: whole(over("textWidth", setting("textWidth", 160)), 60, 400, 160)
-    readonly property string scrollDirection: pick(over("scrollDirection", setting("scrollDirection", "left")), ["left", "right", "bounce", "off"], "left")
-    readonly property int scrollSpeed: whole(over("scrollSpeed", setting("scrollSpeed", 35)), 10, 120, 35)
-    readonly property int scrollPause: whole(over("scrollPause", setting("scrollPause", 1500)), 0, 5000, 1500)
-    readonly property string textAlign: pick(over("textAlign", setting("textAlign", "left")), ["left", "center", "right"], "left")
-
-    readonly property bool showControls: flag(over("showControls", setting("showControls", true)), true)
-    readonly property string controlsSide: pick(over("controlsSide", setting("controlsSide", "right")), ["left", "right"], "right")
-    readonly property bool hideWhenPaused: flag(over("hideWhenPaused", setting("hideWhenPaused", false)), false)
-    readonly property string clickAction: pick(over("clickAction", setting("clickAction", "playPause")), ["playPause", "next", "none"], "playPause")
-    readonly property string wheelAction: pick(over("wheelAction", setting("wheelAction", "track")), ["track", "style", "none"], "track")
-    readonly property string playerPref: String(over("player", setting("player", "auto")))
-    readonly property bool compactText: flag(over("compactText", setting("compactText", true)), true)
-    readonly property bool showAlbumArt: flag(over("showAlbumArt", setting("showAlbumArt", true)), true)
-    readonly property string coverSide: pick(over("coverSide", setting("coverSide", "hidden")), ["hidden", "left", "center", "right"], "hidden")
-    readonly property int coverSize: whole(over("coverSize", setting("coverSize", 16)), 10, 36, 16)
-    readonly property bool pauseOthers: flag(over("pauseOthers", setting("pauseOthers", false)), false)
+    // ---- settings ---------------------------------------------------------------
+    // Every setting, checked: the defaults, then this widget's entry in shell.json,
+    // then what was changed in the settings panel (saved by the service).
+    readonly property var cfg: Schema.resolve(root.settings, service ? service.local : null)
 
     // Album art URL, empty when nothing is playing.
     readonly property string albumArt: service ? service.albumArt : ""
 
-    function pick(value, allowed, fallback) {
-        var v = String(value)
-        return allowed.indexOf(v) >= 0 ? v : fallback
-    }
-
-    function whole(value, lo, hi, fallback) {
-        var v = Number(value)
-        if (!isFinite(v)) return fallback
-        return Math.max(lo, Math.min(hi, Math.round(v)))
-    }
-
-    // `omarchy bar set` may store booleans as strings, so accept both.
-    function flag(value, fallback) {
-        if (value === true || value === "true") return true
-        if (value === false || value === "false") return false
-        return fallback
-    }
-
     // ---- derived state -----------------------------------------------------
-    readonly property string effStyle: service && service.styleOverride !== "" ? service.styleOverride : styleSetting
+    readonly property string effStyle: service && service.styleOverride !== "" ? service.styleOverride : cfg.vizStyle
     // Always on the bar by default (idle placeholder when nothing plays);
     // "Hide when paused" is the opt-out.
-    readonly property bool shouldShow: hideWhenPaused ? (hasMedia && playing) : true
-    readonly property bool vizLeft: vizSide === "left" || vizSide === "both"
-    readonly property bool vizRight: vizSide === "right" || vizSide === "both"
+    readonly property bool shouldShow: cfg.hideWhenPaused ? (hasMedia && playing) : true
+    readonly property bool vizLeft: cfg.vizSide === "left" || cfg.vizSide === "both"
+    readonly property bool vizRight: cfg.vizSide === "right" || cfg.vizSide === "both"
     readonly property real vizHeight: Style.space(18)
-    readonly property bool squareStyle: Visuals.isSquare(effStyle)
-    readonly property real vizItemWidth: squareStyle ? vizHeight + Style.space(2) : vizWidth
+    readonly property real vizItemWidth: Visuals.isSquare(effStyle) ? vizHeight + Style.space(2) : cfg.vizWidth
     readonly property color fg: bar ? bar.barForeground : Color.foreground
     readonly property string fontName: bar ? bar.fontFamily : Style.font.family
 
     readonly property string label: {
         if (!service || !service.hasMedia) return "Nothing playing"
-        var t = service.title
-        var a = service.artist
-        if (textFormat === "title") return t !== "" ? t : a
-        if (textFormat === "artist") return a !== "" ? a : t
+        const t = service.title, a = service.artist, sep = cfg.separator
+        if (cfg.textFormat === "title") return t !== "" ? t : a
+        if (cfg.textFormat === "artist") return a !== "" ? a : t
         if (t === "" || a === "") return t !== "" ? t : a
-        return textFormat === "title-artist" ? t + separator + a : a + separator + t
+        return cfg.textFormat === "title-artist" ? t + sep + a : a + sep + t
     }
 
     visible: shouldShow
@@ -114,21 +52,21 @@ BarWidget {
         ? (vertical ? verticalContent.implicitHeight + Style.space(10) : barSize) : 0
 
     // ---- talk to the shared service ------------------------------------------
-    readonly property bool wantsViz: shouldShow && vizSide !== "hidden"
+    readonly property bool wantsViz: shouldShow && cfg.vizSide !== "hidden"
     property var registeredWith: null
 
-    readonly property string configKey: [effStyle, barCount, fps, sensitivity, smoothing, engine].join("|")
+    readonly property string configKey: [effStyle, cfg.barCount, cfg.fps, cfg.sensitivity, cfg.smoothing, cfg.engine].join("|")
 
     function pushConfig() {
         if (!service || registeredWith !== service) return
         service.configure({
-            style: effStyle, bars: barCount, fps: fps,
-            gain: sensitivity, smooth: smoothing, engine: engine
+            style: effStyle, bars: cfg.barCount, fps: cfg.fps,
+            gain: cfg.sensitivity, smooth: cfg.smoothing, engine: cfg.engine
         })
     }
 
     function syncRegistration() {
-        var want = wantsViz ? service : null
+        const want = wantsViz ? service : null
         if (registeredWith === want) return
         if (registeredWith) {
             try { registeredWith.unregister() } catch (e) { }
@@ -143,40 +81,23 @@ BarWidget {
     // Tell the shared service which player to follow.
     function pushPlayer() {
         if (!service) return
-        service.preferred = playerPref
-        service.pauseOthers = pauseOthers
-    }
-
-    Connections {
-        target: root.service
-        ignoreUnknownSignals: true
-        function onFollowed(playerId) { settingsStore.set("player", playerId) }
-    }
-
-    // A temporary style set from outside (IPC) must never shadow a style the
-    // user just picked, so any style edit drops it and the pick shows at once.
-    Connections {
-        target: settingsStore
-        function onKeyChanged(key) {
-            if ((key === "vizStyle" || key === "*") && root.service && root.service.styleOverride !== "")
-                root.service.styleOverride = ""
-        }
+        service.preferred = cfg.player
+        service.pauseOthers = cfg.pauseOthers
     }
 
     // Wheel over the widget: step through the styles and keep the choice.
     function stepStyle(step) {
-        var i = styleChoices.indexOf(effStyle)
+        const list = Visuals.keys
+        let i = list.indexOf(effStyle)
         if (i < 0) i = 0
-        var n = styleChoices.length
-        var next = styleChoices[(i + (step < 0 ? n - 1 : 1)) % n]
-        if (service) service.styleOverride = ""
-        settingsStore.set("vizStyle", next)
+        const next = list[(i + (step < 0 ? list.length - 1 : 1)) % list.length]
+        if (service) service.setSetting("vizStyle", next)
     }
 
+    readonly property string playerKey: cfg.player + "|" + cfg.pauseOthers
     onWantsVizChanged: syncRegistration()
     onServiceChanged: { syncRegistration(); pushPlayer() }
-    onPlayerPrefChanged: pushPlayer()
-    onPauseOthersChanged: pushPlayer()
+    onPlayerKeyChanged: pushPlayer()
     onConfigKeyChanged: Qt.callLater(pushConfig)
     Component.onCompleted: { syncRegistration(); pushPlayer() }
     Component.onDestruction: {
@@ -196,7 +117,7 @@ BarWidget {
     function tooltipLine() {
         if (!service || !service.hasMedia) return "Omaudix: nothing playing"
         return service.artist !== "" && service.title !== ""
-            ? service.title + " \u2014 " + service.artist : label
+            ? service.title + " — " + service.artist : label
     }
 
     // ---- horizontal layout --------------------------------------------------
@@ -204,10 +125,10 @@ BarWidget {
         id: horizontalContent
         visible: !root.vertical
         anchors.centerIn: parent
-        spacing: root.compactText ? Style.space(1) : Style.space(6)
+        spacing: root.cfg.compactText ? Style.space(1) : Style.space(6)
 
         Controls {
-            visible: root.showControls && root.controlsSide === "left"
+            visible: root.cfg.showControls && root.cfg.controlsSide === "left"
             bar: root.bar
             service: root.service
             anchors.verticalCenter: parent.verticalCenter
@@ -224,76 +145,76 @@ BarWidget {
                 anchors.centerIn: parent
                 spacing: Style.space(6)
 
-                Cover {
-                    visible: root.coverSide === "left"
-                    width: root.coverSize
-                    height: root.coverSize
+        Cover {
+                    width: root.cfg.coverSize
+                    height: root.cfg.coverSize
                     source: root.albumArt
                     ink: root.fg
+                    visible: root.cfg.coverSide === "left"
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
                 Visualizer {
-                    visible: root.vizLeft
                     width: root.vizItemWidth
                     height: root.vizHeight
                     levels: root.service ? root.service.levels : []
                     vizStyle: root.effStyle
-                    colorMode: root.colorMode
-                    customColor: root.customColor
+                    colorMode: root.cfg.colorMode
+                    customColor: root.cfg.customColor
                     foreground: root.fg
-                    count: root.barCount
+                    count: root.cfg.barCount
+                    visible: root.vizLeft
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
-                Cover {
-                    visible: root.coverSide === "center"
-                    width: root.coverSize
-                    height: root.coverSize
+        Cover {
+                    width: root.cfg.coverSize
+                    height: root.cfg.coverSize
                     source: root.albumArt
                     ink: root.fg
+                    visible: root.cfg.coverSide === "center"
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
                 MarqueeText {
                     id: marquee
-                    visible: root.showText
+                    visible: root.cfg.showText
                     // compact: only as wide as the title, up to textWidth;
                     // longer titles fill textWidth and scroll as before
-                    width: !root.showText ? 0
-                        : root.compactText ? Math.min(root.textWidth, Math.ceil(marquee.naturalWidth) + 1)
-                        : root.textWidth
+                    width: !root.cfg.showText ? 0
+                        : root.cfg.compactText ? Math.min(root.cfg.textWidth, Math.ceil(marquee.naturalWidth) + 1)
+                        : root.cfg.textWidth
                     text: root.label
                     color: root.fg
                     fontFamily: root.fontName
                     fontPixelSize: Style.font.bodySmall
-                    direction: root.scrollDirection
-                    speed: root.scrollSpeed
-                    pause: root.scrollPause
-                    align: root.textAlign
+                    direction: root.cfg.scrollDirection
+                    speed: root.cfg.scrollSpeed
+                    pause: root.cfg.scrollPause
+                    align: root.cfg.textAlign
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
                 Visualizer {
-                    visible: root.vizRight
                     width: root.vizItemWidth
                     height: root.vizHeight
                     levels: root.service ? root.service.levels : []
                     vizStyle: root.effStyle
-                    colorMode: root.colorMode
-                    customColor: root.customColor
+                    colorMode: root.cfg.colorMode
+                    customColor: root.cfg.customColor
                     foreground: root.fg
-                    count: root.barCount
-                    flip: root.vizSide === "both"
+                    count: root.cfg.barCount
+                    visible: root.vizRight
+                    flip: root.cfg.vizSide === "both"
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
-                Cover {
-                    visible: root.coverSide === "right"
-                    width: root.coverSize
-                    height: root.coverSize
+        Cover {
+                    width: root.cfg.coverSize
+                    height: root.cfg.coverSize
                     source: root.albumArt
                     ink: root.fg
+                    visible: root.cfg.coverSide === "right"
                     anchors.verticalCenter: parent.verticalCenter
                 }
             }
@@ -311,14 +232,14 @@ BarWidget {
                     }
                     if (!root.service) return
                     if (mouse.button === Qt.MiddleButton) root.service.runAction("next")
-                    else if (root.clickAction === "playPause") root.service.runAction("playPause")
-                    else if (root.clickAction === "next") root.service.runAction("next")
+                    else if (root.cfg.clickAction === "playPause") root.service.runAction("playPause")
+                    else if (root.cfg.clickAction === "next") root.service.runAction("next")
                 }
 
                 onWheel: function(wheel) {
-                    if (!root.service || root.wheelAction === "none") return
-                    var up = wheel.angleDelta.y > 0
-                    if (root.wheelAction === "style") root.stepStyle(up ? -1 : 1)
+                    if (!root.service || root.cfg.wheelAction === "none") return
+                    const up = wheel.angleDelta.y > 0
+                    if (root.cfg.wheelAction === "style") root.stepStyle(up ? -1 : 1)
                     else root.service.runAction(up ? "previous" : "next")
                 }
 
@@ -328,7 +249,7 @@ BarWidget {
         }
 
         Controls {
-            visible: root.showControls && root.controlsSide === "right"
+            visible: root.cfg.showControls && root.cfg.controlsSide === "right"
             bar: root.bar
             service: root.service
             anchors.verticalCenter: parent.verticalCenter
@@ -337,7 +258,7 @@ BarWidget {
         Button {
             id: gearH
             visible: true
-            iconText: "\uDB81\uDC93"
+            iconText: "󰒓"
             foreground: root.fg
             fontFamily: root.fontName
             iconSize: Style.font.body
@@ -360,17 +281,17 @@ BarWidget {
         spacing: Style.space(3)
 
         Cover {
-            visible: root.coverSide !== "hidden"
-            width: root.coverSize
-            height: root.coverSize
+            width: root.cfg.coverSize
+            height: root.cfg.coverSize
             source: root.albumArt
             ink: root.fg
+            visible: root.cfg.coverSide !== "hidden"
             anchors.horizontalCenter: parent.horizontalCenter
         }
 
         Button {
-            visible: root.showControls
-            iconText: root.playing ? "\uDB80\uDFE4" : "\uDB81\uDC0A"
+            visible: root.cfg.showControls
+            iconText: root.playing ? "󰏤" : "󰐊"
             foreground: root.fg
             fontFamily: root.fontName
             iconSize: Style.font.body
@@ -380,7 +301,7 @@ BarWidget {
         }
 
         Item {
-            visible: root.vizSide !== "hidden"
+            visible: root.cfg.vizSide !== "hidden"
             width: Style.space(20)
             height: Style.space(54)
 
@@ -391,8 +312,8 @@ BarWidget {
                 rotation: 90
                 levels: root.service ? root.service.levels : []
                 vizStyle: root.effStyle
-                colorMode: root.colorMode
-                customColor: root.customColor
+                colorMode: root.cfg.colorMode
+                customColor: root.cfg.customColor
                 foreground: root.fg
                 count: 12
             }
@@ -407,7 +328,7 @@ BarWidget {
         Button {
             id: gearV
             visible: true
-            iconText: "\uDB81\uDC93"
+            iconText: "󰒓"
             foreground: root.fg
             fontFamily: root.fontName
             iconSize: Style.font.body
@@ -424,24 +345,13 @@ BarWidget {
     // ---- settings popup --------------------------------------------------------
     SettingsPopup {
         id: settingsPopup
-        store: settingsStore
+        svc: root.service
+        shellSettings: root.settings
+        cfg: root.cfg
         anchorItem: root
         barObject: root.bar
         vertical: root.vertical
         fg: root.fg
         fontFamily: root.fontName
-        panelMode: root.panelColor
-        panelAccent: root.panelCustomColor
-        albumArt: root.albumArt
-        title: root.service ? root.service.title : ""
-        artist: root.service ? root.service.artist : ""
-        showAlbumArt: root.showAlbumArt
-        levels: root.service ? root.service.levels : []
-        players: root.service ? root.service.playerList : []
-        activeId: root.service ? root.service.activeId : ""
-        selectedId: root.service ? root.service.selectedId : ""
-        preferredPlayer: root.playerPref
-        onPlayerChosen: function(playerId) { if (root.service) root.service.switchTo(playerId) }
-        readSetting: function(key, fallback) { return root.setting(key, fallback) }
     }
 }

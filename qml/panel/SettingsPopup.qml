@@ -5,46 +5,47 @@ import Quickshell.Io
 import qs.Commons
 import "../bar"
 import "../js/Visuals.js" as Visuals
-import "../js/Colors.js" as Colors
+import "../js/Schema.js" as Schema
 
 // Floating settings panel for Omaudix.
 //
 //   * Header card: cover art, track, and a live preview of the visualizer
 //     (real audio when playing, sample data otherwise).
-//   * Four tabs: Look, Response, Text, Behavior.
+//   * Tabs from js/Schema.js, a search box that looks through all of them and a
+//     "Changed only" switch. Every change goes through the service, which keeps it
+//     in memory and saves it.
+//   * Looks: ready made looks (one step of undo) and twelve places for your own.
 //   * Every setting is a SettingRow: plain numbers (no px/ms/%), friendly
 //     option names, a one-line hint, and a reset arrow once it differs from
 //     the default. Settings that currently have no effect are dimmed.
-//   * Colors: the "Settings panel colors" setting picks the scheme. Follow theme
-//     uses the Omarchy theme's accent and background, Custom uses a hex accent,
+//   * Colors: the "Panel colors" setting picks the scheme. Follow theme uses the
+//     Omarchy theme's accent and background, Custom uses a hex accent,
 //     Monochrome is neutral grey. Text always follows the bar foreground.
 PopupWindow {
     id: root
 
-    property var store: null
+    property var svc: null                    // the shared service
+    property var shellSettings: ({})          // this widget's entry in shell.json
+    property var cfg: ({})                    // every setting, resolved
     property var anchorItem: null
     property bool vertical: false             // bar is on the left / right edge
     property color fg: "white"
     property string fontFamily: ""
-    property string panelMode: "theme"            // theme | custom | monochrome
-    property string panelAccent: "#7aa2f7"        // used by custom
-    property var readSetting: null
-    property string albumArt: ""
-    property string title: ""
-    property string artist: ""
-    property bool showAlbumArt: true
-    property var levels: []
-    property var players: []              // [{ id, name, track, playing }]
-    property string activeId: ""          // player currently shown on the bar
-    property string selectedId: ""        // exact player the user picked (empty = Auto)
-    property string preferredPlayer: "auto"
 
-    // Emitted when a specific player is picked, so the widget can pause the
-    // others and start that one.
-    signal playerChosen(string playerId)
+    readonly property var store: svc ? svc.store : null
+    readonly property string albumArt: svc ? svc.albumArt : ""
+    readonly property string title: svc ? svc.title : ""
+    readonly property string artist: svc ? svc.artist : ""
+    readonly property var levels: svc ? svc.levels : []
+    readonly property var players: svc ? svc.playerList : []      // [{ id, name, track, playing }]
+    readonly property string activeId: svc ? svc.activeId : ""     // player currently shown on the bar
+    readonly property string selectedId: svc ? svc.selectedId : "" // exact player picked (empty = Auto)
+    readonly property string preferredPlayer: String(cfg.player || "auto")
 
     property int tab: 0
     property bool confirmReset: false
+    property string query: ""
+    property bool changedOnly: false
 
     // ---- colors --------------------------------------------------------------
     // Look up a color the shell's theme may expose, trying several likely names.
@@ -73,6 +74,8 @@ PopupWindow {
     readonly property var themeBgColor: themeColor(["background", "surface", "base", "bg"])
     readonly property var customAccentColor: hexColor(panelAccent)
 
+    readonly property string panelMode: String(root.cfg.panelColor || "theme")
+    readonly property string panelAccent: String(root.cfg.panelCustomColor || "#7aa2f7")
     readonly property bool useTheme: panelMode === "theme"
     readonly property bool useCustom: panelMode === "custom"
 
@@ -95,6 +98,7 @@ PopupWindow {
     readonly property color panelSolid: Qt.rgba(panelBg.r, panelBg.g, panelBg.b, 1)
     function tint(a) { return Qt.rgba(ink.r, ink.g, ink.b, a) }
     function accentTint(a) { return Qt.rgba(accent.r, accent.g, accent.b, a) }
+
 
     // ---- placement: never overlap the bar -----------------------------------------
     // Worked out each time the panel is about to open (see toggle()), because the
@@ -220,6 +224,8 @@ PopupWindow {
     // runtime so a shell without that module simply keeps the X button and Esc.
     property var grab: null
     property double grabClosedAt: 0
+    property double openedAt: 0
+    property int grabTries: 0
 
     Component.onCompleted: {
         try {
@@ -227,6 +233,13 @@ PopupWindow {
                 'import Quickshell.Hyprland\nHyprlandFocusGrab { }', root, "OmaudixFocusGrab")
             g.windows = [root]
             g.cleared.connect(function() {
+                // A grab that ends right after opening was taken before the panel was
+                // on screen: take it again instead of closing what was just opened.
+                if (root.visible && Date.now() - root.openedAt < 700 && root.grabTries < 4) {
+                    root.grabTries++
+                    grabTimer.restart()
+                    return
+                }
                 root.grabClosedAt = Date.now()
                 root.visible = false
             })
@@ -248,181 +261,13 @@ PopupWindow {
     }
 
     // ---- settings --------------------------------------------------------------
-    // Item: { key, label, kind, fallback, hint, options?, labels?, presets?,
-    //         min?, max?, step?, divisor?, decimals?, when? }
-    // `when` is a list of { key, is: [...] }; if any fails the row is dimmed.
-    readonly property var tabs: [
-        { title: "Player", kind: "players", items: [] },
-        {
-            title: "Look",
-            items: [
-                { key: "vizStyle", label: "Style", kind: "viz", fallback: "bars",
-                  options: Visuals.keys,
-                  labels: Visuals.labels,
-                  hint: "How the music is drawn. Scroll the wheel over the widget to flip through them." },
-                { key: "vizSide", label: "Placement", kind: "enum", fallback: "left",
-                  options: ["left", "right", "both", "hidden"],
-                  labels: { left: "Left", right: "Right", both: "Both", hidden: "Hidden" },
-                  hint: "Which side of the text it sits on. Both mirrors it." },
-                { key: "vizWidth", label: "Width", kind: "int", fallback: 72,
-                  min: 24, max: 240, step: 4,
-                  hint: "How wide it is. Ring and Orb always stay square.",
-                  when: [{ key: "vizSide", is: ["left", "right", "both"] }] },
-                { key: "coverSide", label: "Cover on the bar", kind: "enum", fallback: "hidden",
-                  options: ["hidden", "left", "center", "right"],
-                  labels: { hidden: "Hidden", left: "Left", center: "Center", right: "Right" },
-                  hint: "Show the song's cover on the bar. Center puts it right before the text." },
-                { key: "coverSize", label: "Cover size", kind: "int", fallback: 16,
-                  min: 10, max: 36, step: 2,
-                  hint: "How big the cover is on the bar.",
-                  when: [{ key: "coverSide", is: ["left", "center", "right"] }] },
-                { key: "barCount", label: "Bar count", kind: "int", fallback: 20,
-                  min: 6, max: 64, step: 2,
-                  hint: "Fewer looks chunky, more looks fine. Used by bar-like styles." },
-                { key: "colorMode", label: "Color", kind: "colors", fallback: "theme",
-                  options: Colors.keys,
-                  labels: Colors.labels,
-                  hint: "Theme follows your bar." },
-                { key: "customColor", label: "Custom color", kind: "color", fallback: "#7aa2f7",
-                  presets: ["#7aa2f7", "#bb9af7", "#7dcfff", "#9ece6a", "#e0af68", "#ff9e64", "#f7768e", "#c0caf5"],
-                  hint: "Pick one, or type a hex like #7aa2f7.",
-                  when: [{ key: "colorMode", is: ["custom"] }] },
-                { key: "panelColor", label: "Settings panel colors", kind: "scheme", fallback: "theme",
-                  options: ["theme", "custom", "monochrome"],
-                  labels: { theme: "Follow theme", custom: "Custom", monochrome: "Monochrome" },
-                  hint: "Colors of this panel. Follow theme brings in your theme's accent." },
-                { key: "panelCustomColor", label: "Panel accent color", kind: "color", fallback: "#7aa2f7",
-                  presets: ["#7aa2f7", "#bb9af7", "#7dcfff", "#9ece6a", "#e0af68", "#ff9e64", "#f7768e", "#c0caf5"],
-                  hint: "Pick one, or type a hex like #7aa2f7.",
-                  when: [{ key: "panelColor", is: ["custom"] }] }
-            ]
-        },
-        {
-            title: "Response",
-            items: [
-                { key: "sensitivity", label: "Sensitivity", kind: "int", fallback: 100,
-                  min: 25, max: 400, step: 5, divisor: 100, decimals: 2,
-                  hint: "How tall it gets. 1 is normal, 2 is twice as tall." },
-                { key: "smoothing", label: "Smoothing", kind: "int", fallback: 60,
-                  min: 0, max: 100, step: 5,
-                  hint: "Higher means bars fall more gently." },
-                { key: "fps", label: "Frame rate", kind: "int", fallback: 30,
-                  min: 15, max: 60, step: 5,
-                  hint: "Smoother motion, but uses more CPU." },
-                { key: "engine", label: "Engine", kind: "enum", fallback: "auto",
-                  options: ["auto", "cava", "builtin"],
-                  labels: { auto: "Auto", cava: "Cava", builtin: "Built-in" },
-                  hint: "Auto uses cava when installed, otherwise the built-in analyzer." }
-            ]
-        },
-        {
-            title: "Text",
-            items: [
-                { key: "showText", label: "Show track text", kind: "bool", fallback: true,
-                  hint: "Artist and title next to the visualizer." },
-                { key: "textFormat", label: "Format", kind: "enum", fallback: "artist-title",
-                  options: ["artist-title", "title-artist", "title", "artist"],
-                  labels: { "artist-title": "Artist \u2013 Title", "title-artist": "Title \u2013 Artist",
-                            title: "Title", artist: "Artist" },
-                  hint: "What to show, and in which order.",
-                  when: [{ key: "showText", is: [true] }] },
-                { key: "separator", label: "Separator", kind: "string", fallback: " - ",
-                  maxLength: 5,
-                  presets: [" - ", " \u2013 ", " \u2022 ", " | ", " \u00B7 "],
-                  hint: "Goes between artist and title.",
-                  when: [{ key: "showText", is: [true] },
-                         { key: "textFormat", is: ["artist-title", "title-artist"] }] },
-                { key: "compactText", label: "Shrink to short titles", kind: "bool", fallback: true,
-                  hint: "Short titles sit right next to the buttons. Off keeps a fixed width.",
-                  when: [{ key: "showText", is: [true] }] },
-                { key: "textWidth", label: "Max text width", kind: "int", fallback: 160,
-                  min: 60, max: 400, step: 10,
-                  hint: "Longer titles scroll instead of growing the widget.",
-                  when: [{ key: "showText", is: [true] }] },
-                { key: "scrollDirection", label: "Scroll", kind: "enum", fallback: "left",
-                  options: ["left", "right", "bounce", "off"],
-                  labels: { left: "Left", right: "Right", bounce: "Bounce", off: "Off" },
-                  hint: "How long titles move. Off cuts them short instead.",
-                  when: [{ key: "showText", is: [true] }] },
-                { key: "scrollSpeed", label: "Scroll speed", kind: "int", fallback: 35,
-                  min: 10, max: 120, step: 5,
-                  hint: "Higher is faster.",
-                  when: [{ key: "showText", is: [true] },
-                         { key: "scrollDirection", is: ["left", "right", "bounce"] }] },
-                { key: "scrollPause", label: "Pause before scroll", kind: "int", fallback: 1500,
-                  min: 0, max: 5000, step: 250, divisor: 1000, decimals: 2,
-                  hint: "Seconds the text waits so you can read the start.",
-                  when: [{ key: "showText", is: [true] },
-                         { key: "scrollDirection", is: ["left", "right", "bounce"] }] },
-                { key: "textAlign", label: "Alignment", kind: "enum", fallback: "left",
-                  options: ["left", "center", "right"],
-                  labels: { left: "Left", center: "Center", right: "Right" },
-                  hint: "For text short enough to fit without scrolling.",
-                  when: [{ key: "showText", is: [true] }] }
-            ]
-        },
-        {
-            title: "Behavior",
-            items: [
-                { key: "showControls", label: "Playback buttons", kind: "bool", fallback: true,
-                  hint: "Previous, play/pause and next." },
-                { key: "controlsSide", label: "Buttons side", kind: "enum", fallback: "right",
-                  options: ["left", "right"],
-                  labels: { left: "Left", right: "Right" },
-                  hint: "Which end of the widget holds them.",
-                  when: [{ key: "showControls", is: [true] }] },
-                { key: "clickAction", label: "Left click", kind: "enum", fallback: "playPause",
-                  options: ["playPause", "next", "none"],
-                  labels: { playPause: "Play / Pause", next: "Next track", none: "Nothing" },
-                  hint: "On the visualizer or text. Middle click always skips." },
-                { key: "wheelAction", label: "Scroll wheel", kind: "enum", fallback: "track",
-                  options: ["track", "style", "none"],
-                  labels: { track: "Skip tracks", style: "Change style", none: "Nothing" },
-                  hint: "Style changes are saved as you scroll." },
-                { key: "hideWhenPaused", label: "Hide when paused", kind: "bool", fallback: false,
-                  hint: "Remove the widget from the bar while nothing plays." },
-                { key: "pauseOthers", label: "Pause the old player", kind: "bool", fallback: false,
-                  hint: "When another player starts playing, pause the one that was playing before." },
-                { key: "showAlbumArt", label: "Cover art in this panel", kind: "bool", fallback: true,
-                  hint: "Show the current cover in the header above." }
-            ]
-        }
-    ]
+    readonly property var tabs: Schema.tabs
+    readonly property var defaults: Schema.defaults()
 
-    readonly property var defaults: {
-        var d = ({})
-        for (var t = 0; t < tabs.length; t++)
-            for (var i = 0; i < tabs[t].items.length; i++)
-                d[tabs[t].items[i].key] = tabs[t].items[i].fallback
-        d["player"] = "auto"
-        return d
-    }
-
-    // Current value: local override, then the shell's setting, then default.
-    function val(key) {
-        var fb = root.defaults[key]
-        var raw = root.store ? root.store.values[key] : undefined
-        if (raw !== undefined) return raw
-        if (root.readSetting) {
-            var s = root.readSetting(key, fb)
-            if (s !== undefined && s !== null) return s
-        }
-        return fb
-    }
-
-    function dimmed(item) {
-        if (!item.when) return false
-        for (var i = 0; i < item.when.length; i++) {
-            var c = item.when[i]
-            var cur = String(root.val(c.key))
-            if (c.is.map(String).indexOf(cur) < 0) return true
-        }
-        return false
-    }
-
-    function setValue(item, v) {
-        if (root.store) root.store.set(item.key, v)
-    }
+    function val(key) { return root.cfg[key] }
+    function isChanged(it) { return String(root.cfg[it.key]) !== String(it.fallback) }
+    function dimmed(it) { return !Schema.active(it, root.cfg) }
+    function setValue(it, v) { if (root.svc) root.svc.setSetting(it.key, v) }
 
     function resetAll() {
         if (!root.store) return
@@ -435,6 +280,40 @@ PopupWindow {
         root.store.resetAll(root.defaults)
     }
 
+    // What the list shows: the active tab's groups, or with a search every match,
+    // under the name of its tab. Headers and rows in one flat list.
+    readonly property var rows: {
+        const out = []
+        const q = root.query.trim()
+        const pick = (it) => Schema.matches(it, q) && (!root.changedOnly || root.isChanged(it))
+        if (q !== "" || root.changedOnly) {
+            for (const t of root.tabs) {
+                let first = true
+                for (const g of t.groups) for (const it of g.items) {
+                    if (!pick(it)) continue
+                    if (first) { out.push({ header: t.title }); first = false }
+                    out.push({ item: it })
+                }
+            }
+            return out
+        }
+        const t = root.tabs[root.tab]
+        for (const g of t.groups) {
+            out.push({ header: g.title })
+            for (const it of g.items) out.push({ item: it })
+        }
+        return out
+    }
+    readonly property bool listing: root.query.trim() !== "" || root.changedOnly
+    readonly property string pageKind: root.listing ? "list" : (root.tabs[root.tab].kind || "list")
+
+    function stepTab(d) {
+        root.query = ""
+        root.tab = (root.tab + d + root.tabs.length) % root.tabs.length
+    }
+
+    // colors the look tiles can draw with
+    readonly property var lookColors: ({})
     // ---- clipboard paste for text fields ---------------------------------------
     // Native paste is disabled in SettingRow. A paste request runs a fixed command
     // that reads at most `pasteMaxBytes` from the clipboard, and the text is handed
@@ -471,28 +350,32 @@ PopupWindow {
         }
     }
 
+    // the search field pastes through the same capped read
+    function insertPasted(target, raw) {
+        const t = String(raw === null || raw === undefined ? "" : raw).split(/\r?\n/)[0]
+        target.insert(target.cursorPosition, t)
+        root.query = target.text
+    }
+
     // ---- player list ----------------------------------------------------------
     readonly property bool preferredRunning: root.selectedId !== ""
 
     readonly property string activeName: {
-        for (var i = 0; i < root.players.length; i++)
-            if (root.players[i].id === root.activeId) return root.players[i].name
+        for (const p of root.players) if (p.id === root.activeId) return p.name
         return ""
     }
 
     readonly property var playerRows: {
-        var rows = [{
+        const rows = [{
             id: "auto", auto: true, name: "Auto", via: "", playing: false,
             sub: (root.preferredPlayer !== "auto" && root.preferredPlayer !== "" && !root.preferredRunning)
                 ? "Your chosen player isn't running, following whatever plays"
                 : (root.activeName !== "" ? "Follows whatever is playing \u00B7 now: " + root.activeName
                                           : "Follows whatever is playing")
         }]
-        for (var i = 0; i < root.players.length; i++) {
-            var q = root.players[i]
+        for (const q of root.players)
             rows.push({ id: q.id, auto: false, name: q.name, via: q.via, playing: q.playing,
                         sub: q.track !== "" ? q.track : "Nothing loaded" })
-        }
         return rows
     }
 
@@ -503,15 +386,11 @@ PopupWindow {
 
     function pickPlayer(row) {
         if (root.store) root.store.set("player", row.id)
-        if (!row.auto) root.playerChosen(row.id)
-    }
-
-    function stepTab(d) {
-        root.tab = (root.tab + d + root.tabs.length) % root.tabs.length
+        if (!row.auto && root.svc) root.svc.switchTo(row.id)
     }
 
     // What the preview should draw.
-    readonly property string previewStyle: String(root.val("vizStyle"))
+    readonly property string previewStyle: String(root.cfg.vizStyle || "bars")
     readonly property var previewLevels: (root.levels && root.levels.length > 0)
         ? root.levels
         : (Visuals.isScope(root.previewStyle) ? root.demoScope : root.demoSpectrum)
@@ -519,7 +398,7 @@ PopupWindow {
     // ---- window geometry -------------------------------------------------------
     visible: false
     color: "transparent"
-    implicitWidth: 440 + root.padLeft + root.padRight
+    implicitWidth: 470 + root.padLeft + root.padRight
     implicitHeight: Math.min(root.maxHeight, mainCol.implicitHeight + 28) + root.padTop + root.padBottom
 
     anchor.item: root.useRect ? null : root.anchorItem
@@ -537,8 +416,23 @@ PopupWindow {
     anchor.adjustment: root.vertical ? PopupAdjustment.SlideY : PopupAdjustment.SlideX
 
     onVisibleChanged: {
-        if (!visible) root.confirmReset = false
-        if (root.grab) Qt.callLater(function() { root.grab.active = root.visible })
+        if (!visible) {
+            root.confirmReset = false
+            grabTimer.stop()
+            if (root.grab) root.grab.active = false
+            return
+        }
+        root.openedAt = Date.now()
+        root.grabTries = 0
+        // the grab only holds once the panel is really on screen, which takes a frame
+        // or two for a full page of previews
+        grabTimer.restart()
+    }
+
+    Timer {
+        id: grabTimer
+        interval: 150
+        onTriggered: if (root.grab && root.visible) root.grab.active = true
     }
 
     Timer { id: confirmTimer; interval: 2500; onTriggered: root.confirmReset = false }
@@ -546,7 +440,10 @@ PopupWindow {
     Shortcut {
         sequence: "Escape"
         context: Qt.WindowShortcut
-        onActivated: root.visible = false
+        onActivated: {
+            if (root.query !== "") root.query = ""
+            else root.visible = false
+        }
     }
     Shortcut {
         sequence: "Alt+Right"
@@ -557,6 +454,52 @@ PopupWindow {
         sequence: "Alt+Left"
         context: Qt.WindowShortcut
         onActivated: root.stepTab(-1)
+    }
+    Shortcut {
+        sequence: "Ctrl+F"
+        context: Qt.WindowShortcut
+        onActivated: searchField.forceActiveFocus()
+    }
+
+    component Chip: Rectangle {
+        id: chip
+        property string text: ""
+        property bool on: false
+        signal clicked()
+        implicitWidth: chipText.implicitWidth + 18
+        implicitHeight: 24
+        radius: 6
+        color: on ? root.accent : (chipArea.containsMouse ? root.tint(0.12) : root.tint(0.06))
+        Behavior on color { ColorAnimation { duration: 100 } }
+        Text {
+            id: chipText
+            textFormat: Text.PlainText
+            anchors.centerIn: parent
+            text: chip.text
+            color: chip.on ? root.inkOnFg : root.ink
+            font.family: root.fontFamily
+            font.pixelSize: 9
+            font.weight: chip.on ? Font.DemiBold : Font.Normal
+        }
+        MouseArea {
+            id: chipArea
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: chip.clicked()
+        }
+    }
+
+    component Heading: Text {
+        textFormat: Text.PlainText
+        Layout.fillWidth: true
+        color: root.ink
+        opacity: 0.55
+        font.family: root.fontFamily
+        font.pixelSize: 8
+        font.weight: Font.DemiBold
+        font.letterSpacing: 1.2
+        font.capitalization: Font.AllUppercase
     }
 
     Rectangle {
@@ -575,7 +518,7 @@ PopupWindow {
             id: mainCol
             anchors.fill: parent
             anchors.margins: 14
-            spacing: 12
+            spacing: 10
 
             // ---- header: track + live preview ------------------------------------
             Rectangle {
@@ -597,7 +540,7 @@ PopupWindow {
                         spacing: 12
 
                         Rectangle {
-                            visible: root.showAlbumArt
+                            visible: root.cfg.showAlbumArt === true
                             Layout.preferredWidth: 52
                             Layout.preferredHeight: 52
                             radius: 8
@@ -713,73 +656,98 @@ PopupWindow {
                             height: Visuals.isSquare(root.previewStyle) ? 28 : 26
                             levels: root.previewLevels
                             vizStyle: root.previewStyle
-                            colorMode: String(root.val("colorMode"))
-                            customColor: String(root.val("customColor"))
+                            colorMode: String(root.cfg.colorMode)
+                            customColor: String(root.cfg.customColor)
                             foreground: root.fg
-                            count: Number(root.val("barCount"))
+                            count: Number(root.cfg.barCount)
                         }
                     }
+                }
+            }
+
+
+            // ---- search + changed only ---------------------------------------------
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: 26
+                    radius: 6
+                    color: root.tint(0.06)
+                    border.width: 1
+                    border.color: searchField.activeFocus ? root.accent : root.tint(0.12)
+
+                    Text {
+                        textFormat: Text.PlainText
+                        anchors.left: parent.left
+                        anchors.leftMargin: 9
+                        anchors.verticalCenter: parent.verticalCenter
+                        visible: searchField.text === "" && !searchField.activeFocus
+                        text: "Search every setting (Ctrl+F)"
+                        color: root.ink
+                        opacity: 0.4
+                        font.family: root.fontFamily
+                        font.pixelSize: 9
+                    }
+                    SafeField {
+                        id: searchField
+                        anchors.fill: parent
+                        anchors.leftMargin: 9
+                        anchors.rightMargin: 24
+                        maxChars: 40
+                        color: root.ink
+                        selectionColor: root.accentTint(0.35)
+                        fontFamily: root.fontFamily
+                        fontPixelSize: 10
+                        onTextChanged: root.query = text
+                        onPasteRequested: root.requestPaste(root, searchField)
+                        Binding on text { when: !searchField.activeFocus; value: root.query }
+                    }
+                    Text {
+                        textFormat: Text.PlainText
+                        visible: root.query !== ""
+                        anchors.right: parent.right
+                        anchors.rightMargin: 8
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "\u00D7"
+                        color: root.ink
+                        font.pixelSize: 13
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -4
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: { root.query = ""; searchField.text = "" }
+                        }
+                    }
+                }
+                Chip {
+                    text: "Changed only"
+                    on: root.changedOnly
+                    onClicked: root.changedOnly = !root.changedOnly
                 }
             }
 
             // ---- tabs --------------------------------------------------------------
-            Item {
+            Flow {
                 Layout.fillWidth: true
-                implicitHeight: 30
+                spacing: 4
+                opacity: root.listing ? 0.45 : 1
 
-                Rectangle {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.bottom: parent.bottom
-                    height: 1
-                    color: root.tint(0.10)
-                }
-
-                RowLayout {
-                    anchors.fill: parent
-                    spacing: 0
-
-                    Repeater {
-                        model: root.tabs
-                        delegate: Item {
-                            readonly property bool on: index === root.tab
-                            Layout.fillWidth: true
-                            Layout.preferredWidth: 1
-                            Layout.fillHeight: true
-
-                            Text {
-                                textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
-                                anchors.centerIn: parent
-                                anchors.verticalCenterOffset: -1
-                                text: modelData.title
-                                color: root.ink
-                                opacity: parent.on ? 1.0 : (tabArea.containsMouse ? 0.8 : 0.5)
-                                font.family: root.fontFamily
-                                font.pixelSize: 10
-                                font.weight: parent.on ? Font.DemiBold : Font.Normal
-                            }
-                            Rectangle {
-                                visible: parent.on
-                                anchors.left: parent.left
-                                anchors.right: parent.right
-                                anchors.bottom: parent.bottom
-                                height: 2
-                                radius: 1
-                                color: root.accent
-                            }
-                            MouseArea {
-                                id: tabArea
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.tab = index
-                            }
-                        }
+                Repeater {
+                    model: root.tabs
+                    delegate: Chip {
+                        required property var modelData
+                        required property int index
+                        text: modelData.title
+                        on: !root.listing && index === root.tab
+                        onClicked: { root.query = ""; root.changedOnly = false; root.tab = index }
                     }
                 }
             }
 
-            // ---- settings of the active tab ------------------------------------------
+            // ---- the page ------------------------------------------------------------
             Flickable {
                 id: flick
                 Layout.fillWidth: true
@@ -793,14 +761,14 @@ PopupWindow {
                 Rectangle {
                     id: card
                     width: flick.width
-                    implicitHeight: rows.implicitHeight + 8
+                    implicitHeight: rowsCol.implicitHeight + 8
                     radius: 10
                     color: root.tint(0.035)
                     border.width: 1
                     border.color: root.tint(0.07)
 
                     ColumnLayout {
-                        id: rows
+                        id: rowsCol
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.top: parent.top
@@ -809,174 +777,203 @@ PopupWindow {
                         anchors.topMargin: 4
                         spacing: 0
 
-                        // ---- Player tab ----------------------------------------------
-                        ColumnLayout {
-                            visible: root.tabs[root.tab].kind === "players"
+                        // ---- Looks ---------------------------------------------------------
+                        LooksPage {
+                            visible: root.pageKind === "looks"
                             Layout.fillWidth: true
+                            Layout.preferredWidth: rowsCol.width
+                            Layout.maximumWidth: rowsCol.width
                             Layout.topMargin: 12
                             Layout.bottomMargin: 12
-                            spacing: 6
+                            svc: root.svc
+                            cfg: root.cfg
+                            fg: root.fg
+                            ink: root.ink
+                            accent: root.accent
+                            inkOnFg: root.inkOnFg
+                            fontFamily: root.fontFamily
+                            levels: root.demoSpectrum
+                        }
 
-                            Text {
-                                textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
-                                Layout.fillWidth: true
-                                text: "Follow which player?"
-                                color: root.ink
-                                font.family: root.fontFamily
-                                font.pixelSize: 10
-                                font.weight: Font.DemiBold
-                            }
-                            Text {
-                                textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
-                                Layout.fillWidth: true
-                                Layout.bottomMargin: 4
-                                text: "Pick one to pause the others and play it. Auto just follows whatever is playing."
-                                color: root.ink
-                                opacity: 0.55
-                                font.family: root.fontFamily
-                                font.pixelSize: 8
-                                wrapMode: Text.Wrap
-                            }
+                    // ---- Player tab ----------------------------------------------
+                    ColumnLayout {
+                        visible: root.query === "" && root.tabs[root.tab].kind === "players"
+                        Layout.fillWidth: true
+                        Layout.topMargin: 12
+                        Layout.bottomMargin: 12
+                        spacing: 6
 
-                            Repeater {
-                                model: root.tabs[root.tab].kind === "players" ? root.playerRows : []
-
-                                delegate: Rectangle {
-                                    readonly property bool picked: root.isPicked(modelData)
-                                    readonly property bool onBar: !modelData.auto && modelData.id === root.activeId
-                                    Layout.fillWidth: true
-                                    Layout.preferredHeight: 46
-                                    Layout.minimumHeight: 46
-                                    implicitHeight: 46
-                                    clip: true
-                                    radius: 8
-                                    color: picked ? root.accentTint(0.18) : (pArea.containsMouse ? root.tint(0.09) : root.tint(0.04))
-                                    border.width: picked ? 1.5 : 1
-                                    border.color: picked ? root.accent : root.tint(0.08)
-                                    Behavior on color { ColorAnimation { duration: 100 } }
-
-                                    // radio dot
-                                    Rectangle {
-                                        id: radio
-                                        anchors.left: parent.left
-                                        anchors.leftMargin: 10
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        width: 12; height: 12; radius: 6
-                                        color: "transparent"
-                                        border.width: 1.5
-                                        border.color: picked ? root.accent : root.tint(0.4)
-                                        Rectangle {
-                                            anchors.centerIn: parent
-                                            width: 6; height: 6; radius: 3
-                                            color: root.accent
-                                            visible: picked
-                                        }
-                                    }
-
-                                    ColumnLayout {
-                                        id: rowText
-                                        anchors.left: radio.right
-                                        anchors.leftMargin: 10
-                                        anchors.right: stateText.left
-                                        anchors.rightMargin: 8
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        spacing: 1
-
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: 6
-                                            Text {
-                                                textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
-                                                text: modelData.name
-                                                color: root.ink
-                                                font.family: root.fontFamily
-                                                font.pixelSize: 10
-                                                font.weight: Font.DemiBold
-                                                elide: Text.ElideRight
-                                                Layout.fillWidth: modelData.via === ""
-                                                Layout.maximumWidth: Math.max(40, rowText.width - viaText.implicitWidth - 8)
-                                            }
-                                            Text {
-                                                textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
-                                                id: viaText
-                                                visible: modelData.via !== ""
-                                                text: "via " + modelData.via
-                                                color: root.ink
-                                                opacity: 0.45
-                                                font.family: root.fontFamily
-                                                font.pixelSize: 8
-                                            }
-                                            Item { Layout.fillWidth: true }
-                                        }
-                                        Text {
-                                            textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
-                                            Layout.fillWidth: true
-                                            text: modelData.sub
-                                            color: root.ink
-                                            opacity: 0.55
-                                            font.family: root.fontFamily
-                                            font.pixelSize: 8
-                                            elide: Text.ElideRight
-                                        }
-                                    }
-
-                                    Text {
-                                        textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
-                                        id: stateText
-                                        anchors.right: parent.right
-                                        anchors.rightMargin: 10
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        visible: !modelData.auto
-                                        text: modelData.playing ? "\u25CF Playing" : "Paused"
-                                        color: root.ink
-                                        opacity: modelData.playing ? 0.9 : 0.4
-                                        font.family: root.fontFamily
-                                        font.pixelSize: 8
-                                    }
-
-                                    MouseArea {
-                                        id: pArea
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: root.pickPlayer(modelData)
-                                    }
-                                }
-                            }
-
-                            Text {
-                                textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
-                                Layout.fillWidth: true
-                                visible: root.players.length === 0
-                                text: "No players found. Start Spotify, YouTube Music, cliamp, a radio app, or play something in a browser and it will show up here."
-                                color: root.ink
-                                opacity: 0.55
-                                font.family: root.fontFamily
-                                font.pixelSize: 8
-                                wrapMode: Text.Wrap
-                            }
-                            Text {
-                                textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
-                                Layout.fillWidth: true
-                                Layout.topMargin: 4
-                                text: "The visualizer listens to your system output, so it reacts to whatever is audible, not only the selected player."
-                                color: root.ink
-                                opacity: 0.4
-                                font.family: root.fontFamily
-                                font.pixelSize: 8
-                                wrapMode: Text.Wrap
-                            }
+                        Text {
+                            textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
+                            Layout.fillWidth: true
+                            text: "Follow which player?"
+                            color: root.ink
+                            font.family: root.fontFamily
+                            font.pixelSize: 10
+                            font.weight: Font.DemiBold
+                        }
+                        Text {
+                            textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
+                            Layout.fillWidth: true
+                            Layout.bottomMargin: 4
+                            text: "Pick one to pause the others and play it. Auto just follows whatever is playing."
+                            color: root.ink
+                            opacity: 0.55
+                            font.family: root.fontFamily
+                            font.pixelSize: 8
+                            wrapMode: Text.Wrap
                         }
 
                         Repeater {
-                            model: root.tabs[root.tab].items
+                            model: root.query === "" && root.tabs[root.tab].kind === "players" ? root.playerRows : []
+
+                            delegate: Rectangle {
+                                readonly property bool picked: root.isPicked(modelData)
+                                readonly property bool onBar: !modelData.auto && modelData.id === root.activeId
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: 46
+                                Layout.minimumHeight: 46
+                                implicitHeight: 46
+                                clip: true
+                                radius: 8
+                                color: picked ? root.accentTint(0.18) : (pArea.containsMouse ? root.tint(0.09) : root.tint(0.04))
+                                border.width: picked ? 1.5 : 1
+                                border.color: picked ? root.accent : root.tint(0.08)
+                                Behavior on color { ColorAnimation { duration: 100 } }
+
+                                // radio dot
+                                Rectangle {
+                                    id: radio
+                                    anchors.left: parent.left
+                                    anchors.leftMargin: 10
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 12; height: 12; radius: 6
+                                    color: "transparent"
+                                    border.width: 1.5
+                                    border.color: picked ? root.accent : root.tint(0.4)
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: 6; height: 6; radius: 3
+                                        color: root.accent
+                                        visible: picked
+                                    }
+                                }
+
+                                ColumnLayout {
+                                    id: rowText
+                                    anchors.left: radio.right
+                                    anchors.leftMargin: 10
+                                    anchors.right: stateText.left
+                                    anchors.rightMargin: 8
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    spacing: 1
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 6
+                                        Text {
+                                            textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
+                                            text: modelData.name
+                                            color: root.ink
+                                            font.family: root.fontFamily
+                                            font.pixelSize: 10
+                                            font.weight: Font.DemiBold
+                                            elide: Text.ElideRight
+                                            Layout.fillWidth: modelData.via === ""
+                                            Layout.maximumWidth: Math.max(40, rowText.width - viaText.implicitWidth - 8)
+                                        }
+                                        Text {
+                                            textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
+                                            id: viaText
+                                            visible: modelData.via !== ""
+                                            text: "via " + modelData.via
+                                            color: root.ink
+                                            opacity: 0.45
+                                            font.family: root.fontFamily
+                                            font.pixelSize: 8
+                                        }
+                                        Item { Layout.fillWidth: true }
+                                    }
+                                    Text {
+                                        textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
+                                        Layout.fillWidth: true
+                                        text: modelData.sub
+                                        color: root.ink
+                                        opacity: 0.55
+                                        font.family: root.fontFamily
+                                        font.pixelSize: 8
+                                        elide: Text.ElideRight
+                                    }
+                                }
+
+                                Text {
+                                    textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
+                                    id: stateText
+                                    anchors.right: parent.right
+                                    anchors.rightMargin: 10
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    visible: !modelData.auto
+                                    text: modelData.playing ? "\u25CF Playing" : "Paused"
+                                    color: root.ink
+                                    opacity: modelData.playing ? 0.9 : 0.4
+                                    font.family: root.fontFamily
+                                    font.pixelSize: 8
+                                }
+
+                                MouseArea {
+                                    id: pArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.pickPlayer(modelData)
+                                }
+                            }
+                        }
+
+                        Text {
+                            textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
+                            Layout.fillWidth: true
+                            visible: root.players.length === 0
+                            text: "No players found. Start Spotify, YouTube Music, cliamp, a radio app, or play something in a browser and it will show up here."
+                            color: root.ink
+                            opacity: 0.55
+                            font.family: root.fontFamily
+                            font.pixelSize: 8
+                            wrapMode: Text.Wrap
+                        }
+                        Text {
+                            textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
+                            Layout.fillWidth: true
+                            Layout.topMargin: 4
+                            text: "The visualizer listens to your system output, so it reacts to whatever is audible, not only the selected player."
+                            color: root.ink
+                            opacity: 0.4
+                            font.family: root.fontFamily
+                            font.pixelSize: 8
+                            wrapMode: Text.Wrap
+                        }
+                    }
+
+                        // ---- settings rows -------------------------------------------------
+                        Repeater {
+                            model: root.pageKind === "looks" ? [] : root.rows
 
                             delegate: ColumnLayout {
+                                id: entry
+                                required property var modelData
+                                required property int index
                                 Layout.fillWidth: true
                                 spacing: 0
 
+                                Heading {
+                                    visible: !!entry.modelData.header
+                                    Layout.topMargin: entry.index > 0 ? 16 : 12
+                                    Layout.bottomMargin: 2
+                                    text: entry.modelData.header || ""
+                                }
+
                                 Rectangle {
-                                    visible: index > 0
+                                    visible: !!entry.modelData.item && entry.index > 0 && !root.rows[entry.index - 1].header
                                     Layout.fillWidth: true
                                     implicitHeight: 1
                                     color: root.tint(0.07)
@@ -984,25 +981,28 @@ PopupWindow {
 
                                 SettingRow {
                                     id: settingRow
+                                    readonly property var it: entry.modelData.item || ({ key: "", label: "", kind: "", fallback: null })
+                                    visible: !!entry.modelData.item
                                     Layout.fillWidth: true
                                     Layout.topMargin: 12
                                     Layout.bottomMargin: 12
 
-                                    label: modelData.label
-                                    hint: modelData.hint || ""
-                                    kind: modelData.kind
-                                    options: modelData.options || []
-                                    labels: modelData.labels || ({})
-                                    presets: modelData.presets || []
-                                    maxLength: modelData.maxLength !== undefined ? modelData.maxLength : 256
-                                    min: modelData.min !== undefined ? modelData.min : 0
-                                    max: modelData.max !== undefined ? modelData.max : 100
-                                    step: modelData.step !== undefined ? modelData.step : 1
-                                    divisor: modelData.divisor !== undefined ? modelData.divisor : 1
-                                    decimals: modelData.decimals !== undefined ? modelData.decimals : 0
-                                    defaultValue: modelData.fallback
-                                    dimmed: root.dimmed(modelData)
-                                    value: root.val(modelData.key)
+                                    label: it.label
+                                    hint: it.hint || ""
+                                    kind: it.kind
+                                    options: it.options || []
+                                    labels: it.labels || ({})
+                                    abouts: it.abouts || ({})
+                                    presets: it.presets || []
+                                    maxLength: it.maxLength !== undefined ? it.maxLength : 256
+                                    min: it.min !== undefined ? it.min : 0
+                                    max: it.max !== undefined ? it.max : 100
+                                    step: it.step !== undefined ? it.step : 1
+                                    divisor: it.divisor !== undefined ? it.divisor : 1
+                                    decimals: it.decimals !== undefined ? it.decimals : 0
+                                    defaultValue: it.fallback
+                                    dimmed: entry.modelData.item ? root.dimmed(it) : false
+                                    value: root.cfg[it.key]
 
                                     fg: root.ink
                                     accent: root.accent
@@ -1010,7 +1010,7 @@ PopupWindow {
                                     panel: root.panelSolid
                                     barFg: root.fg
                                     fontFamily: root.fontFamily
-                                    customColor: String(root.val("customColor"))
+                                    customColor: String(root.cfg.customColor)
                                     schemeAccent: root.themeAccentColor ? root.themeAccentColor : root.accent
                                     schemeBg: root.themeBgColor ? root.themeBgColor : root.panelSolid
                                     schemeCustom: root.customAccentColor ? root.customAccentColor : root.accent
@@ -1019,10 +1019,23 @@ PopupWindow {
                                     demoSpectrum: root.demoSpectrum
                                     demoScope: root.demoScope
 
-                                    onEdited: function(v) { root.setValue(modelData, v) }
+                                    onEdited: function(v) { root.setValue(settingRow.it, v) }
                                     onClipboardPaste: function(target, maxBytes) { root.requestPaste(settingRow, target) }
                                 }
                             }
+                        }
+
+                        Text {
+                            textFormat: Text.PlainText
+                            visible: root.listing && root.rows.length === 0
+                            Layout.fillWidth: true
+                            Layout.topMargin: 14
+                            Layout.bottomMargin: 14
+                            text: root.changedOnly && root.query.trim() === "" ? "Everything is at its default." : "No setting matches that."
+                            color: root.ink
+                            opacity: 0.5
+                            font.family: root.fontFamily
+                            font.pixelSize: 9
                         }
                     }
                 }
@@ -1060,7 +1073,7 @@ PopupWindow {
                 Item { Layout.fillWidth: true }
                 Text {
                     textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
-                    text: "Changes apply instantly"
+                    text: "Changes apply instantly and are saved"
                     color: root.ink
                     opacity: 0.45
                     font.family: root.fontFamily

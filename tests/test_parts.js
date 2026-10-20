@@ -11,6 +11,7 @@ const js = (f) => path.join(ROOT, "qml/js", f);
 const Draw = load(js("Draw.js"));
 const Visuals = load(js("Visuals.js"));
 const Colors = load(js("Colors.js"));
+const Schema = load(js("Schema.js"));
 const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "manifest.json"), "utf8"));
 const schemaOf = (key) => manifest.barWidget.schema.find((s) => s.key === key);
 
@@ -115,6 +116,95 @@ test("Draw helpers", () => {
     assert.ok(Math.abs(r[0] - 255) < 1 && r[1] < 1 && r[2] < 1);
     assert.strictEqual(Draw.sample([0, 1], 1, 3), 0.5);
     assert.strictEqual(Draw.css([255, 0, 0], 0.5), "rgba(255,0,0,0.500)");
+});
+
+test("the manifest's settings match the schema: defaults and options", () => {
+    for (const s of manifest.barWidget.schema) {
+        const it = Schema.byKey[s.key];
+        if (s.key === "player") { assert.strictEqual(s.defaultValue, Schema.hidden.player); continue; }
+        assert.ok(it, s.key + " missing from Schema.js");
+        assert.strictEqual(JSON.stringify(s.defaultValue), JSON.stringify(it.fallback), s.key + " default");
+        if (s.type === "enum") assert.strictEqual(JSON.stringify(s.options), JSON.stringify(Array.from(it.options)), s.key + " options");
+        if (s.type === "integer") { assert.strictEqual(s.min, it.min, s.key); assert.strictEqual(s.max, it.max, s.key); }
+    }
+});
+
+test("every schema item is complete and its default is valid", () => {
+    const seen = new Set();
+    for (const it of Schema.items) {
+        assert.ok(!seen.has(it.key), "twice: " + it.key); seen.add(it.key);
+        assert.ok(it.label && it.hint, it.key);
+        assert.strictEqual(JSON.stringify(Schema.cleanValue(it.key, it.fallback)), JSON.stringify(it.fallback), it.key);
+        for (const c of it.when || []) assert.ok(Schema.byKey[c.key], it.key + " depends on " + c.key);
+    }
+});
+
+test("values are checked: wrong types, out of range, unknown options", () => {
+    assert.strictEqual(Schema.cleanValue("vizWidth", 9999), 240);
+    assert.strictEqual(Schema.cleanValue("vizWidth", "50"), 50);
+    assert.strictEqual(Schema.cleanValue("vizWidth", "x"), 72);
+    assert.strictEqual(Schema.cleanValue("showText", "false"), false);
+    assert.strictEqual(Schema.cleanValue("vizStyle", "nope"), "bars");
+    assert.strictEqual(Schema.cleanValue("customColor", "red"), "#7aa2f7");
+    assert.strictEqual(Schema.cleanValue("separator", "abcdefgh"), "abcde");
+    assert.strictEqual(Schema.cleanValue("startLook", 3), "3");
+});
+
+test("settings are layered: defaults, then shell.json, then the panel", () => {
+    const r = Schema.resolve({ vizStyle: "wave", fps: 45 }, { vizStyle: "ring", fps: null });
+    assert.strictEqual(r.vizStyle, "ring");
+    assert.strictEqual(r.fps, 45);
+    assert.strictEqual(r.barCount, 20);
+});
+
+test("an old settings file still reads the same", () => {
+    const old = { vizStyle: "capsules", vizSide: "both", coverSide: "center", coverSize: 16, barCount: 56,
+                  textFormat: "title", colorMode: "rainbow", separator: " \u2022 ", sensitivity: 145, textWidth: 100,
+                  player: "org.mpris.MediaPlayer2.chromium.instance2990357" };
+    const r = Schema.resolve(null, old);
+    for (const k in old) assert.strictEqual(r[k], old[k], k);
+});
+
+test("ready made looks only set look keys, all valid, and are told apart", () => {
+    const seen = new Set();
+    for (const L of Schema.looks) {
+        for (const k in L.set) assert.ok(Schema.lookKeys.indexOf(k) >= 0, L.key + ": " + k + " is not a look key");
+        const full = Schema.lookSet(L.key);
+        for (const k in L.set) assert.strictEqual(String(full[k]), String(L.set[k]), L.key + "." + k);
+        const sig = JSON.stringify(full);
+        assert.ok(!seen.has(sig), L.key + " is the same as another look"); seen.add(sig);
+        assert.strictEqual(Schema.lookNow(Object.assign(Schema.defaults(), full)), L.key);
+    }
+});
+
+test("imported looks keep only look keys", () => {
+    const L = Schema.cleanLook({ vizStyle: "neon", player: "evil", hideWhenPaused: true, vizWidth: 1e9 });
+    assert.strictEqual(L.vizStyle, "neon");
+    assert.strictEqual(L.vizWidth, 240);
+    assert.strictEqual(L.player, undefined);
+    assert.strictEqual(L.hideWhenPaused, undefined);
+    assert.strictEqual(Schema.cleanLook("x"), null);
+    assert.strictEqual(Schema.cleanLook({ nothing: 1 }), null);
+});
+
+test("search finds settings by their words", () => {
+    const hits = Schema.items.filter((it) => Schema.matches(it, "scroll speed")).map((it) => it.key);
+    assert.ok(hits.indexOf("scrollSpeed") >= 0);
+    assert.strictEqual(Schema.items.filter((it) => Schema.matches(it, "zzzz")).length, 0);
+});
+
+test("your own places keep every setting and give all of it back", () => {
+    const mine = Object.assign(Schema.defaults(), { vizStyle: "ring", clickAction: "next",
+        player: "org.mpris.MediaPlayer2.spotify", panelColor: "monochrome", fps: 45, startLook: "3" });
+    const kept = Schema.settingsOf(mine);
+    for (const k of ["vizStyle", "clickAction", "player", "panelColor", "fps"])
+        assert.strictEqual(String(kept[k]), String(mine[k]), k);
+    assert.strictEqual(kept.startLook, undefined, "Look at login stays out");
+    assert.strictEqual(Object.keys(kept).length, Object.keys(Schema.defaults()).length - 1);
+    const back = Schema.cleanSettings(JSON.parse(JSON.stringify(kept)));
+    assert.strictEqual(JSON.stringify(back), JSON.stringify(kept));
+    assert.strictEqual(Schema.cleanSettings({ fps: 9999, nonsense: 1 }).fps, 60);
+    assert.strictEqual(Schema.cleanSettings({ nonsense: 1 }), null);
 });
 
 console.log(passed + " passed");

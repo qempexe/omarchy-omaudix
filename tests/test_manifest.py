@@ -1,5 +1,5 @@
 #!/usr/bin/python3
-"""Checks manifest.json against the QML: no setting declared but unread, or read but undeclared."""
+"""Checks manifest.json against the code, and that untrusted text is never shown as rich text."""
 import json, os, re, sys, unittest
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
@@ -19,39 +19,14 @@ class ManifestTests(unittest.TestCase):
         for rel in self.m["entryPoints"].values():
             self.assertTrue(os.path.isfile(os.path.join(ROOT, rel)), rel)
 
-    def test_settings_drift(self):
-        qml = read("qml/BarWidget.qml")
-        used = set(re.findall(r'setting\("([A-Za-z0-9_]+)"', qml))
-        schema = {s["key"] for s in self.bw["schema"]}
-        self.assertEqual(used, schema)
-        self.assertEqual(set(self.bw["defaults"]), schema)
-
-    def test_defaults_match_schema_and_qml_fallbacks(self):
-        qml = read("qml/BarWidget.qml")
+    def test_every_manifest_setting_is_in_the_schema(self):
+        # js/Schema.js holds every setting; tests/test_parts.js checks defaults and options
+        schema = read("qml/js/Schema.js")
+        known = set(re.findall(r'key: "([A-Za-z0-9_]+)"', schema)) | {"player"}
         for s in self.bw["schema"]:
+            self.assertIn(s["key"], known, s["key"])
             self.assertEqual(self.bw["defaults"][s["key"]], s["defaultValue"], s["key"])
-            m = re.search(r'setting\("%s", ([^)]+)\)' % s["key"], qml)
-            lit = json.loads(m.group(1))
-            self.assertEqual(lit, s["defaultValue"], "QML fallback for " + s["key"])
-            if s["type"] == "enum":
-                self.assertIn(s["defaultValue"], s["options"])
-            if s["type"] == "integer":
-                self.assertTrue(s["min"] <= s["defaultValue"] <= s["max"])
-
-    def test_qml_choice_lists_match_manifest_options(self):
-        qml = read("qml/BarWidget.qml")
-        for s in self.bw["schema"]:
-            if s["type"] != "enum":
-                continue
-            # setting(...) may be wrapped by over(...) for popup overrides.
-            m = re.search(
-                r'setting\("%s", [^)]+\)\s*\)*\s*,\s*(\[[^\]]*\]|styleChoices|Colors\.keys)' % s["key"],
-                qml,
-            )
-            self.assertIsNotNone(m, s["key"])
-            if m.group(1) in ("styleChoices", "Colors.keys"):
-                continue          # the registries; tests/test_parts.js checks those
-            self.assertEqual(json.loads(m.group(1)), s["options"], s["key"])
+        self.assertEqual(set(self.bw["defaults"]), {s["key"] for s in self.bw["schema"]})
 
     def test_every_text_item_is_plain_text(self):
         """MPRIS metadata is attacker-controlled: Text.AutoText would render

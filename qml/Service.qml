@@ -2,7 +2,9 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Mpris
+import "core"
 import "js/Visuals.js" as Visuals
+import "js/Schema.js" as Schema
 
 // Shared brain of Omaudix. Reads the active MPRIS player
 // and runs ONE audio helper (viz.py) for every widget instance.
@@ -15,6 +17,112 @@ Item {
 
     readonly property string pluginId: "io.github.qempexe.omaudix"
     readonly property var styleNames: Visuals.keys
+
+    // ---- settings ----------------------------------------------------------------
+    // What was changed in the settings panel, kept in memory (instant) and saved to
+    // ~/.local/state/omarchy-omaudix/settings.json. Saved looks go to looks.json next
+    // to it, so Reset all never touches them.
+    property SettingsStore store: SettingsStore { }
+    property SettingsStore looksStore: SettingsStore { fileName: "looks.json" }
+    readonly property var local: store.values
+
+    function setSetting(key, value) {
+        store.set(key, Schema.cleanValue(key, value))
+        // a style picked by hand always wins over one set from outside
+        if (key === "vizStyle") styleOverride = ""
+    }
+
+    // ---- looks --------------------------------------------------------------------
+    // The values to compare a look against: the defaults under what was changed.
+    function current() { return Schema.resolve(null, store.values) }
+
+    readonly property var slots: {
+        const raw = looksStore.values.slots
+        const out = []
+        for (let i = 0; i < Schema.SLOTS; i++) out.push(Array.isArray(raw) ? Schema.cleanSettings(raw[i]) : null)
+        return out
+    }
+    readonly property bool canUndo: !!Schema.cleanSettings(looksStore.values.undo)
+
+    // Put on a look (a ready made one by key, or a set of values), or with `all` a whole
+    // saved place, every setting in it. Everything as it was before is kept, so it can
+    // be undone.
+    function wear(look, all) {
+        const clean = all ? Schema.cleanSettings(look) : Schema.cleanLook(look)
+        if (!clean) return false
+        looksStore.set("undo", Schema.settingsOf(current()))
+        store.setMany(clean)
+        styleOverride = ""
+        return true
+    }
+    function applyLook(key) { return wear(Schema.lookSet(key)) }
+    function nextLook() {
+        const keys = Schema.lookOptions
+        const now = Schema.lookNow(current())
+        const i = keys.indexOf(now)
+        return applyLook(keys[(i + 1) % keys.length]) ? keys[(i + 1) % keys.length] : ""
+    }
+    function undoLook() {
+        const back = Schema.cleanSettings(looksStore.values.undo)
+        if (!back) return false
+        looksStore.set("undo", null)
+        store.setMany(back)
+        styleOverride = ""
+        return true
+    }
+    function setSlot(n, look) {
+        const list = []
+        for (let i = 0; i < Schema.SLOTS; i++) list.push(slots[i])
+        list[n] = look
+        looksStore.set("slots", list)
+    }
+    function saveSlot(n) {
+        if (!(n >= 0 && n < Schema.SLOTS)) return false
+        setSlot(n, Schema.settingsOf(current()))
+        return true
+    }
+    function saveNew() {
+        const free = slots.indexOf(null)
+        return free >= 0 && saveSlot(free) ? free : -1
+    }
+    function loadSlot(n) { return n >= 0 && n < Schema.SLOTS && !!slots[n] && wear(slots[n], true) }
+    function clearSlot(n) { if (n >= 0 && n < Schema.SLOTS) setSlot(n, null) }
+    function exportLook() { return JSON.stringify(Schema.lookOf(current())) }
+    function importLook(text) {
+        if (typeof text !== "string" || text.length > 8192) return false
+        try { return wear(JSON.parse(text)) } catch (e) { return false }
+    }
+
+    // ---- at login ---------------------------------------------------------------------
+    // Once the saved settings are in: start on Auto or a saved look if asked to, and
+    // start playing if asked to.
+    property bool startupDone: false
+    property bool autoPlayPending: false
+    readonly property bool storesLoaded: store.loaded && looksStore.loaded
+    onStoresLoadedChanged: if (storesLoaded && !startupDone) Qt.callLater(root.startup)
+    function startup() {
+        startupDone = true
+        const c = current()
+        if (c.startPlayer === "auto" && c.player !== "auto") store.set("player", "auto")
+        const n = parseInt(c.startLook, 10)
+        if (n >= 1 && slots[n - 1]) store.setMany(slots[n - 1])
+        if (c.autoPlay) autoPlayPending = true
+    }
+    // the player may need a moment to show up after login
+    Timer {
+        interval: 1000
+        repeat: true
+        running: root.autoPlayPending
+        property int tries: 0
+        onTriggered: {
+            tries++
+            const p = root.player || root.findPlayer(root.preferred)
+            if (p) {
+                try { if (!p.isPlaying) { if (p.canPlay) p.play(); else if (p.canTogglePlaying) p.togglePlaying() } } catch (e) { }
+                root.autoPlayPending = false
+            } else if (tries >= 30) root.autoPlayPending = false
+        }
+    }
 
     // ---- media -----------------------------------------------------------
     // Third-party plugins cannot reach omarchy.media (the shell only hands that
@@ -236,6 +344,7 @@ Item {
         var cur = findPlayer(preferred)
         if (cur && idOf(cur) === started) return
         preferred = started
+        store.set("player", started)
         followed(started)
     }
 
@@ -544,7 +653,25 @@ Item {
             return "ok"
         }
 
-        function switchPlayer(playerId: string): string { return root.switchTo(playerId) ? "ok" : "not found" }
+        function switchPlayer(playerId: string): string {
+            if (!root.switchTo(playerId)) return "not found"
+            root.store.set("player", playerId)
+            return "ok"
+        }
+
+        function look(key: string): string { return root.applyLook(key) ? "ok" : "unknown look" }
+        function nextLook(): string { return root.nextLook() }
+        function undo(): string { return root.undoLook() ? "ok" : "nothing to undo" }
+        function save(slot: int): string { return root.saveSlot(slot - 1) ? "ok" : "slots are 1 to " + Schema.SLOTS }
+        function saveNew(): string { const n = root.saveNew(); return n >= 0 ? String(n + 1) : "no free slot" }
+        function load(slot: int): string { return root.loadSlot(slot - 1) ? "ok" : "empty slot" }
+        function exportLook(): string { return root.exportLook() }
+        function importLook(json: string): string { return root.importLook(json) ? "ok" : "not a look" }
+        function set(key: string, value: string): string {
+            if (!Schema.byKey[key]) return "unknown setting"
+            root.setSetting(key, value)
+            return JSON.stringify(root.current()[key])
+        }
 
         function playPause(): string { return root.runAction("playPause") ? "ok" : "unhandled" }
         function next(): string { return root.runAction("next") ? "ok" : "unhandled" }
