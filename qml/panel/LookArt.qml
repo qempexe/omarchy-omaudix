@@ -1,0 +1,72 @@
+import QtQuick
+import "../js/Draw.js" as Draw
+import "../js/Visuals.js" as Visuals
+import "../js/Colors.js" as Colors
+
+// A tiny picture of the widget wearing a look: its visual on the side it sits,
+// a hint of the title, and the cover when it shows. Used by the look tiles.
+Canvas {
+    id: root
+
+    property var look: ({})            // values, as Schema.resolve gives them
+    property color fg: "white"
+    property var levels: []
+    property var colorCtx: ({})
+
+    renderTarget: Canvas.Image
+    readonly property string key: JSON.stringify([look, colorCtx, String(fg), width, height])
+    onKeyChanged: requestPaint()
+    onVisibleChanged: if (visible) requestPaint()
+
+    function vizIn(ctx, x, y, w, h, flip) {
+        const v = root.look || ({})
+        const style = Visuals.byKey[v.vizStyle] || Visuals.byKey.bars
+        if (style.square) { x += (w - h) / 2; w = h }
+        ctx.save()
+        ctx.translate(x, y)
+        if (flip) { ctx.translate(w, 0); ctx.scale(-1, 1) }
+        const st = Draw.freshState()
+        Draw.advance(st, root.levels)
+        const cc = Object.assign({ fg: [root.fg.r * 255, root.fg.g * 255, root.fg.b * 255] }, root.colorCtx, { custom: Draw.hex(v.customColor) })
+        const g = Draw.make({ ctx: ctx, w: w, h: h, levels: root.levels, st: st, mem: {}, count: Math.min(14, v.barCount || 14),
+                              colorCtx: cc, colorAt: (t, lv, c) => Colors.at(v.colorMode, t, lv, c) })
+        try { style.draw(g) } catch (e) { }
+        ctx.restore()
+    }
+
+    onPaint: {
+        const ctx = getContext("2d")
+        ctx.reset()
+        const v = root.look || ({})
+        const W = width, H = height
+        if (W < 4 || H < 4) return
+        const vh = Math.min(H, 14), vy = (H - vh) / 2
+        const side = v.vizSide || "left"
+        const left = side === "left" || side === "both", right = side === "right" || side === "both"
+        const cover = v.coverSide && v.coverSide !== "hidden"
+        const vw = right && left ? W * 0.3 : W * 0.38
+        const textW = W - (left ? vw + 4 : 0) - (right ? vw + 4 : 0) - (cover ? vh + 4 : 0)
+        let x = 0
+        if (cover && v.coverSide === "left") { drawCover(ctx, x, vy, vh); x += vh + 4 }
+        if (left) { vizIn(ctx, x, vy, vw, vh, false); x += vw + 4 }
+        if (cover && v.coverSide === "center") { drawCover(ctx, x, vy, vh); x += vh + 4 }
+        // the title, as two soft lines of "text"
+        ctx.fillStyle = Qt.rgba(root.fg.r, root.fg.g, root.fg.b, 0.35)
+        const tw = Math.max(6, textW - (cover && v.coverSide === "right" ? vh + 4 : 0))
+        ctx.beginPath()
+        ctx.roundedRect(x, H / 2 - 1.5, tw * 0.62, 3, 1.5, 1.5)
+        ctx.roundedRect(x + tw * 0.68, H / 2 - 1.5, tw * 0.28, 3, 1.5, 1.5)
+        ctx.fill()
+        x += tw + 4
+        if (right) { vizIn(ctx, x, vy, vw, vh, side === "both"); x += vw + 4 }
+        if (cover && v.coverSide === "right") drawCover(ctx, x, vy, vh)
+    }
+
+    function drawCover(ctx, x, y, s) {
+        ctx.fillStyle = Qt.rgba(root.fg.r, root.fg.g, root.fg.b, 0.22)
+        ctx.beginPath()
+        if (root.look.coverShape === "circle") ctx.arc(x + s / 2, y + s / 2, s / 2, 0, 2 * Math.PI)
+        else ctx.roundedRect(x, y, s, s, 2, 2)
+        ctx.fill()
+    }
+}
