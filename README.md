@@ -45,6 +45,7 @@ A now-playing widget for the Omarchy bar: live visualizer, fixed-width scrolling
 - **Settings stay put**: every change made in the settings panel is saved to
   `~/.local/state/omarchy-omaudix/settings.json` and restored after a shell restart, logout or reboot.
   Only the panel's **Reset all** button (or deleting that file) brings the defaults back.
+- **Looks**: twelve ready made ones with undo, twelve places for your own, export and import as JSON.
 - Horizontal and vertical bars, multi-monitor safe (one shared audio helper).
 - The audio helper only runs while something is playing and the visualizer is visible.
 
@@ -60,11 +61,13 @@ Every style, color mode, cover and placement can be mixed. A few of the many com
 
 ### Settings panel
 
-Five tabs, all changes apply instantly and are saved. **Look** picks the style, placement, width and colors:
+Seven tabs: **Looks**, **Player**, **Visual**, **Colors**, **Text**, **Cover** and **Behavior**. Every change applies at once and is saved. The search box looks through every tab (Ctrl+F), and **Changed only** lists what differs from the defaults.
+
+**Looks** holds twelve ready made looks, one step of undo, and twelve places for looks of your own. A look covers the visual, its colors, the text and the cover; the player and the mouse settings stay as they are. Saved looks live in `looks.json`, so **Reset all** never touches them.
+
+Under **Player** and **Behavior** there are login options: start on Auto or keep the last player, start playing once the shell is up, and start every session in one of your saved looks.
 
 ![Omaudix settings: Look](screenshots/settings-look.png)
-
-**Player**, **Response**, **Text** and **Behavior** (left to right):
 
 ![Omaudix settings: Player, Response, Text, Behavior](screenshots/settings-tabs.png)
 
@@ -154,6 +157,16 @@ Inline form in `~/.config/omarchy/shell.json`:
 
 ```
 omarchy-shell io.github.qempexe.omaudix status       # JSON: media, helper state, last error
+omarchy-shell io.github.qempexe.omaudix look neon    # a ready made look (classic, studio, neon, mirror, waves, pulse,
+                                                     #   cosmos, orbit, comet, scope, helix, minimal)
+omarchy-shell io.github.qempexe.omaudix nextLook     # the next ready made look
+omarchy-shell io.github.qempexe.omaudix undo         # back to before the last look
+omarchy-shell io.github.qempexe.omaudix save 3       # keep the current look in place 3 (1 to 12)
+omarchy-shell io.github.qempexe.omaudix saveNew      # keep it in the first free place
+omarchy-shell io.github.qempexe.omaudix load 3       # and wear it again
+omarchy-shell io.github.qempexe.omaudix exportLook   # the current look as one line of JSON
+omarchy-shell io.github.qempexe.omaudix importLook '{"vizStyle":"ring","colorMode":"rainbow"}'
+omarchy-shell io.github.qempexe.omaudix set vizWidth 96   # any setting, checked like the panel does
 omarchy-shell io.github.qempexe.omaudix cycleStyle   # next visualizer style (until shell restart)
 omarchy-shell io.github.qempexe.omaudix resetStyle
 omarchy-shell io.github.qempexe.omaudix restart      # restart the audio helper
@@ -169,7 +182,8 @@ qml/BarWidget.qml      -- layout, settings, clicks
 qml/bar/               -- Controls, Cover, MarqueeText, Visualizer
 qml/js/visuals/        -- one file per visualizer style
 qml/js/colors/         -- one file per color mode
-qml/panel/             -- SettingsPopup, SettingRow: the settings panel
+qml/panel/             -- SettingsPopup, SettingRow, LooksPage: the settings panel
+qml/js/Schema.js       -- every setting: tab, options, default; the ready made looks
 qml/core/SettingsStore -- the saved overrides
 ```
 
