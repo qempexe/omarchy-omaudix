@@ -21,6 +21,10 @@ A now-playing widget for the Omarchy bar: live visualizer, fixed-width scrolling
   red when loud), pulse (the accent flaring on the beat) and duotone.
 - **Upside down, mirrored or both**: each side's visualizer has its own orientation, so with both
   sides showing they can face each other, hang from the top, or any mix of the two.
+- **A plate behind it all**: off by default. Turned on, the widget gets a shape of its own with
+  32 kinds of ends, 29 surfaces, 22 kinds of lines and 18 ornaments, from a plain capsule to a
+  gilded cartouche. Its line and its gradient can follow your theme's window border, at the
+  border's own angle.
 - **Round covers that spin**: the cover can be square or round, and a round one turns like a record
   while the music plays, to the left or to the right.
 - **Settings panel colors**: the settings panel itself can `theme` (bring your Omarchy theme's
@@ -65,9 +69,9 @@ Every style, color mode, cover and placement can be mixed. A few of the many com
 
 ### Settings panel
 
-Seven tabs: **Looks**, **Player**, **Visual**, **Colors**, **Text**, **Cover** and **Behavior**. Every change applies at once and is saved. The search box looks through every tab (Ctrl+F), and **Changed only** lists what differs from the defaults.
+Ten tabs: **Looks**, **Player**, **Visual**, **Colors**, **Text**, **Cover**, **Shape**, **Surface**, **Edge** and **Behavior**. Every change applies at once and is saved. The search box looks through every tab (Ctrl+F), and **Changed only** lists what differs from the defaults.
 
-**Looks** holds twelve ready made looks, one step of undo, and twelve places for looks of your own. A look covers the visual, its colors, the text and the cover; the player and the mouse settings stay as they are. Saved looks live in `looks.json`, so **Reset all** never touches them.
+**Looks** holds twelve ready made looks, one step of undo, and twelve places for looks of your own. A look covers the visual, its colors, the text, the cover and the plate; the player and the mouse settings stay as they are. Saved looks live in `looks.json`, so **Reset all** never touches them.
 
 Under **Player** and **Behavior** there are login options: start on Auto or keep the last player, start playing once the shell is up, and start every session in one of your saved looks.
 
@@ -191,6 +195,7 @@ qml/BarWidget.qml      -- layout, settings, clicks
 qml/bar/               -- Controls, Cover, MarqueeText, Visualizer
 qml/js/visuals/        -- one file per visualizer style
 qml/js/colors/         -- one file per color mode
+qml/js/parts/          -- the plate's ends, surfaces, lines and ornaments, painted by Paint.js
 qml/panel/             -- SettingsPopup, SettingRow, LooksPage: the settings panel
 qml/js/Schema.js       -- every setting: tab, options, default; the ready made looks
 qml/core/SettingsStore -- the saved overrides
