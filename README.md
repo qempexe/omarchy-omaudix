@@ -1,226 +1,217 @@
-# Omaudix
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: light)" srcset="assets/logo-dark.png">
+    <img src="assets/logo.png" alt="Omaudix logo" width="112">
+  </picture>
+</p>
 
-A now-playing widget for the Omarchy bar: live visualizer, fixed-width scrolling
-`artist - title`, and playback controls for any MPRIS player (Spotify, browsers, ...).
+<h1 align="center">Omaudix</h1>
 
+<p align="center">The song that's playing, on your Omarchy bar: a live visualizer, the title, and the buttons to steer it.</p>
 
+![Omaudix](preview.png)
 
+Omaudix follows any MPRIS player (Spotify, a browser tab, mpv, a radio app) and draws what you hear right next to its title. Everything about it can be changed from its own settings panel: twenty-four visuals, eleven ways to color them, a plate behind the widget with its own ends, surface and edge, round covers that turn like records, and looks you can save and come back to.
 
-![Omaudix preview](preview.png)
+## Getting it
 
-
-## Features
-
-- **24 visualizer styles**: `bars`, `mirror`, `wave`, `scope` (real oscilloscope), `dots`, `led`,
-  `ring`, `area`, `peaks`, `capsules`, `steps`, `neon`, `lightning`, `heartbeat`, `ripple`, `helix`,
-  `comet`, `stellar`, `meter`, `orb`, `waterfall` (a spectrogram that scrolls down), `fountain`
-  (sparks thrown up by each band), `vinyl` (a turning record with the spectrum round its rim) and
-  `skyline` (a city whose windows light up with the music).
-- **11 color modes**: theme, fade, rainbow, custom, a gradient between two colors, your theme's
-  palette, your window border's gradient, colors taken from the song's cover, heat (blue when quiet,
-  red when loud), pulse (the accent flaring on the beat) and duotone.
-- **Upside down, mirrored or both**: each side's visualizer has its own orientation, so with both
-  sides showing they can face each other, hang from the top, or any mix of the two.
-- **A plate behind it all**: off by default. Turned on, the widget gets a shape of its own with
-  32 kinds of ends, 29 surfaces, 22 kinds of lines and 18 ornaments, from a plain capsule to a
-  gilded cartouche. Its line and its gradient can follow your theme's window border, at the
-  border's own angle.
-- **Effects**: a glow around the visualizer, a breathing or flat visualizer while nothing plays,
-  a cover and plate that move with the bass, and titles that fade or slide in when the song changes.
-- **Progress line**: a thin line under the title, on hover or always; click it to jump.
-- **Round covers that spin**: the cover can be square or round, and a round one turns like a record
-  while the music plays, to the left or to the right.
-- **Settings panel colors**: the settings panel itself can `theme` (bring your Omarchy theme's
-  accent and background into the panel), use a `custom` accent hex, or stay `monochrome` (neutral grey).
-  Text always follows the bar foreground. If the shell exposes no theme accent, `theme` looks like `monochrome`.
-- **Position**: visualizer on the `left`, `right`, `both` sides (mirrored) or `hidden`.
-  Controls can sit on either end too.
-- **Capped-width text**: titles that fit are shown at their own width (buttons sit right next to
-  them; turn off `compactText` for a fixed width). Text that does not fit scrolls `left`, `right`, `bounce`s, or is truncated (`off`). Speed and the
-  rest time before each scroll are adjustable. Text that fits can be left/center/right aligned.
-- **Text format**: `artist - title`, `title - artist`, title only, artist only, custom separator (up to 5 characters).
-- **Spectrum engine**: uses `cava` if installed, otherwise a built-in FFT (about 3% of one
-  core at 30 fps). The scope style always uses its own capture.
-- **Tuning**: sensitivity, smoothing, frame rate, band count.
-- **Interactions**: left click (play/pause, next, or nothing), middle click next, mouse
-  wheel skips tracks, changes the player's volume, or cycles the visualizer style.
-- **Player switcher**: the settings panel lists every MPRIS player (Spotify, YouTube Music in a
-  browser, cliamp, radio apps...) with what each is playing. Picking one pauses the others and plays it; keep
-  `Auto` to just follow whatever is playing. Players that all call themselves "mpv" (or a browser)
-  are told apart from their track URL / cover art (YouTube Music, Spotify, Radio, Local file...);
-  `omarchy-shell io.github.qempexe.omaudix status` shows each player's `url` if one is not recognised.
-- **Cover on the bar** (optional): the song's cover, or a note icon when there is none, placed
-  `left` (before everything), `center` (right before the text) or `right` (after everything).
-- **Follows external changes**: when another player starts playing, Omaudix switches to it. Turn on
-  `pauseOthers` to also pause whichever player was playing before (off by default).
-- **Settings stay put**: every change made in the settings panel is saved to
-  `~/.local/state/omarchy-omaudix/settings.json` and restored after a shell restart, logout or reboot.
-  Only the panel's **Reset all** button (or deleting that file) brings the defaults back.
-- **Looks**: twelve ready made ones with undo, twelve places for your own, export and import as JSON.
-- Horizontal and vertical bars, multi-monitor safe (one shared audio helper).
-- The audio helper only runs while something is playing and the visualizer is visible.
-
-## Showcase
-
-### Bar combinations
-
-Every style, color mode, cover and placement can be mixed. A few of the many combinations:
-
-![Omaudix bar combinations](screenshots/combos.png)
-
-... and many, many more combinations!
-
-### Settings panel
-
-Twelve tabs: **Looks**, **Player**, **Visual**, **Colors**, **Text**, **Cover**, **Shape**, **Surface**, **Edge**, **Effects**, **Behavior** and **About**. Every change applies at once and is saved. The search box looks through every tab (Ctrl+F), and **Changed only** lists what differs from the defaults.
-
-**Looks** holds twelve ready made looks, one step of undo, and twelve places for looks of your own. A look covers the visual, its colors, the text, the cover and the plate; the player and the mouse settings stay as they are. Saved looks live in `looks.json`, so **Reset all** never touches them.
-
-Under **Player** and **Behavior** there are login options: start on Auto or keep the last player, start playing once the shell is up, and start every session in one of your saved looks.
-
-![Omaudix settings: Look](screenshots/settings-look.png)
-
-![Omaudix settings: Player, Response, Text, Behavior](screenshots/settings-tabs.png)
-
-## Requirements
-
-- [Omarchy](https://omarchy.org) with its Quickshell-based bar
-- PipeWire (`pw-record`) and Python 3, used by the built-in spectrum engine and the scope
-- Wayland, with `wl-clipboard` (`wl-paste`) and coreutils `timeout`, used for pasting into the settings text fields
-- Optional: [cava](https://github.com/karlstav/cava) for its spectrum engine (install it with your package manager)
-
-## Install
-
-Directly from the repo (no scripts):
-
-```
+```bash
 omarchy plugin add https://github.com/qempexe/omarchy-omaudix.git --enable
+omarchy restart shell
 ```
 
-Or manually, from a local copy of this folder:
+Then place it from the bar settings, or move it with `omarchy bar move io.github.qempexe.omaudix --section left` (or `center`, `right`). The settings panel opens from the gear on the widget, or a right click anywhere on it.
 
+It needs PipeWire (`pw-record`) and Python 3, which Omarchy already has. [cava](https://github.com/karlstav/cava) is used for the spectrum when it's installed; without it a built-in analyzer takes over at about 3% of one core. Pasting into the panel's text fields goes through `wl-paste`.
+
+## Visuals
+
+Twenty-four of them, each in a file of its own. The four newest are **Waterfall**, a spectrogram that scrolls down, **Fountain**, sparks thrown up by each band, **Vinyl**, a record that turns faster when it gets loud, and **Skyline**, a city whose windows light up with the music.
+
+![Visuals](screenshots/visuals.png)
+
+The visualizer can sit left of the title, right of it, on both sides, or nowhere. Each side has its own orientation: normal, upside down, mirrored, or turned (both). With both sides showing, the right one mirrors the left on its own, so the two face each other; any other pairing is one click away.
+
+## Colors
+
+Theme, fade, rainbow and custom, plus a gradient between two colors of your choosing, your theme's palette, your active window border's gradient, colors taken from the song's cover (so every song paints it differently), heat (blue when quiet, red when loud), pulse (the accent flaring on the beat) and duotone.
+
+![Color modes](screenshots/colors.png)
+
+## Looks
+
+Sixteen ready made looks set the visual, its colors, the text, the cover and the plate in one click, and leave everything else alone. The last change can be undone.
+
+Twelve places of your own keep every setting there is, not only the look: the player, the mouse, the panel's colors, the effects, all of it. Choosing a place again brings every one of them back exactly as it was. The places live in their own file, so **Reset all** never touches them, and one of them can be worn at every login.
+
+![Ready made looks](screenshots/looks.png)
+
+## The plate
+
+Off by default. Turned on, the widget gets a shape of its own behind the visualizer, the title and the buttons:
+
+- **Shape**: 32 kinds of ends, from a capsule or an arrow to a cartouche or an onion dome, with their direction, square corners on one side, roundness, height, opacity and room at the ends.
+- **Surface**: 29 materials (frost, velvet, marble, an old screen, a nebula...), solid, gradient or glass, a texture, depth and a shadow.
+- **Edge**: 22 kinds of lines and 18 ornaments, from a hairline to a gilded frame with rosettes.
+
+The plate's line can be drawn in your active window border's own gradient, at the border's own angle, and its fill can run from the border's first color to its last. Change theme and it follows.
+
+## Covers, effects and the small things
+
+![Details](screenshots/details.png)
+
+- **Cover**: left of everything, right before the title, or at the very end, square or round. A round cover can spin like a record, to the left or to the right, and stops where it is when the music pauses. The panel's header shows it the same way.
+- **Glow** around the visualizer, soft or strong.
+- **While nothing plays**: the visualizer can stay still, breathe gently, or show a thin line.
+- **On the beat**: the cover swells and the plate brightens with the bass.
+- **New song**: the title can fade or slide in.
+- **Progress line** under the title, on hover or always. Click it to jump, when the player allows it.
+- **Mouse**: left click plays or pauses (or skips, or nothing), middle click skips, the wheel skips tracks, changes the player's volume, or steps through the visuals.
+- **Text**: artist and title in either order, or just one of them, with your own separator. Long titles scroll left, right, bounce, or are cut short; short ones shrink the widget.
+
+## The settings panel
+
+![Settings](screenshots/settings.png)
+
+Twelve tabs: **Looks**, **Player**, **Visual**, **Colors**, **Text**, **Cover**, **Shape**, **Surface**, **Edge**, **Effects**, **Behavior** and **About**. **Alt+←** and **Alt+→** step through them. **Ctrl+F** searches every setting at once, and **Changed only** lists what differs from the defaults. Rows that do nothing with the current choices are dimmed, and every changed row has its own arrow back to the default.
+
+Everything applies at once and is saved to `~/.local/state/omarchy-omaudix/settings.json`. Your saved places go to `looks.json` next to it.
+
+The **Player** tab lists every player with what it's playing. Players that all call themselves the same (mpv, a browser) are told apart by their track address: YouTube Music, Spotify, a radio stream, a local file. Picking one pauses the others and plays it; **Auto** follows whatever is playing. At login Omaudix can keep following the last player you picked or start on Auto, and can ask it to start playing.
+
+<table>
+<tr>
+<td><img src="screenshots/settings-looks.png" alt="Looks"></td>
+<td><img src="screenshots/settings-player.png" alt="Player"></td>
+<td><img src="screenshots/settings-visual.png" alt="Visual"></td>
+<td><img src="screenshots/settings-colors.png" alt="Colors"></td>
+</tr>
+<tr>
+<td><img src="screenshots/settings-text.png" alt="Text"></td>
+<td><img src="screenshots/settings-cover.png" alt="Cover"></td>
+<td><img src="screenshots/settings-shape.png" alt="Shape"></td>
+<td><img src="screenshots/settings-surface.png" alt="Surface"></td>
+</tr>
+<tr>
+<td><img src="screenshots/settings-edge.png" alt="Edge"></td>
+<td><img src="screenshots/settings-effects.png" alt="Effects"></td>
+<td><img src="screenshots/settings-behavior.png" alt="Behavior"></td>
+<td><img src="screenshots/settings-about.png" alt="About"></td>
+</tr>
+</table>
+
+## In shell.json
+
+The main settings can also go straight into the widget's entry in `~/.config/omarchy/shell.json`. Whatever is changed in the panel wins over them.
+
+```json
+{ "id": "io.github.qempexe.omaudix", "vizStyle": "vinyl", "vizSide": "both", "colorMode": "cover", "coverShape": "circle" }
 ```
-mkdir -p ~/.config/omarchy/plugins/io.github.qempexe.omaudix
-cp -r ./. ~/.config/omarchy/plugins/io.github.qempexe.omaudix/
-omarchy plugin validate ~/.config/omarchy/plugins/io.github.qempexe.omaudix
-omarchy plugin enable io.github.qempexe.omaudix --section left     # or center / right
-```
-
-The widget is always visible once placed. With nothing playing it shows an idle
-"Nothing playing" label; enable **Hide when paused** if you want it gone instead.
-You can also move it with
-`omarchy bar move io.github.qempexe.omaudix --section left`.
-
-Remove: `omarchy plugin remove io.github.qempexe.omaudix`.
-
-Optional: install cava for its spectrum. Without it the built-in engine is used.
-
-## Settings
-
-All of these appear in Omarchy's widget settings UI.
 
 | Setting | Values | Default |
 | --- | --- | --- |
 | `vizStyle` | bars, mirror, wave, scope, dots, led, ring, area, peaks, capsules, steps, neon, lightning, heartbeat, ripple, helix, comet, stellar, meter, orb, waterfall, fountain, vinyl, skyline | bars |
 | `vizSide` | left, right, both, hidden | left |
-| `vizWidth` | 24-240 px | 72 |
-| `barCount` | 6-64 | 20 |
-| `colorMode` | theme, fade, rainbow, custom, gradient, palette, border, cover, heat, pulse, duotone | theme |
-| `customColor2` | hex, where the gradient ends | #f7768e |
 | `vizLeftOrient` | normal, flipped, mirrored, turned | normal |
 | `vizRightOrient` | auto, normal, flipped, mirrored, turned | auto |
-| `coverShape` | square, circle | square |
-| `coverSpin` | off, left, right | off |
-| `customColor` | hex like `#7aa2f7` | #7aa2f7 |
-| `panelColor` | theme, custom, monochrome (colors of the settings panel) | theme |
-| `panelCustomColor` | hex like `#7aa2f7` (used when `panelColor` is custom) | #7aa2f7 |
-| `sensitivity` | 25-400 (100 = normal, shown as 1.00) | 100 |
-| `smoothing` | 0-100 | 60 |
-| `fps` | 15-60 | 30 |
+| `vizWidth` | 24 to 240 | 72 |
+| `barCount` | 6 to 64 | 20 |
+| `colorMode` | theme, fade, rainbow, custom, gradient, palette, border, cover, heat, pulse, duotone | theme |
+| `customColor`, `customColor2` | hex like `#7aa2f7` | #7aa2f7, #f7768e |
+| `panelColor` | theme, custom, monochrome | theme |
+| `panelCustomColor` | hex | #7aa2f7 |
+| `sensitivity` | 25 to 400 (100 is normal) | 100 |
+| `smoothing` | 0 to 100 | 60 |
+| `fps` | 15 to 60 | 30 |
 | `engine` | auto, cava, builtin | auto |
-| `player` | auto or a D-Bus name (pick it in the panel) | auto |
-| `showText` | true / false | true |
+| `player` | auto, or a player's D-Bus name | auto |
+| `showText` | true, false | true |
 | `textFormat` | artist-title, title-artist, title, artist | artist-title |
 | `separator` | up to 5 characters | ` - ` |
-| `compactText` | true / false | true |
-| `textWidth` | 60-400 px (maximum) | 160 |
+| `compactText` | true, false | true |
+| `textWidth` | 60 to 400 | 160 |
 | `scrollDirection` | left, right, bounce, off | left |
-| `scrollSpeed` | 10-120 px/s | 35 |
-| `scrollPause` | 0-5000 ms | 1500 |
+| `scrollSpeed` | 10 to 120 | 35 |
+| `scrollPause` | 0 to 5000 (ms) | 1500 |
 | `textAlign` | left, center, right | left |
-| `showControls` | true / false | true |
+| `showControls` | true, false | true |
 | `controlsSide` | left, right | right |
-| `hideWhenPaused` | true / false | false |
-| `pauseOthers` | true / false | false |
+| `hideWhenPaused` | true, false | false |
+| `pauseOthers` | true, false | false |
 | `coverSide` | hidden, left, center, right | hidden |
-| `coverSize` | 10-36 px | 16 |
+| `coverSize` | 10 to 36 | 16 |
+| `coverShape` | square, circle | square |
+| `coverSpin` | off, left, right | off |
 | `clickAction` | playPause, next, none | playPause |
 | `wheelAction` | track, volume, style, none | track |
-| `showAlbumArt` | true / false (cover in the settings panel header) | true |
+| `showAlbumArt` | true, false (cover in the panel's header) | true |
 
-Pasting into the settings text fields (separator, custom colors) reads at most 1024 bytes of the
-clipboard through `wl-paste`, so a very large clipboard cannot stall the shell. Native paste is off
-in those fields: use Ctrl+V or Shift+Insert, which go through the same capped read. The separator
-is limited to 5 characters for typed and pasted input.
+The plate, the effects and the login options are set from the panel; `omarchy-shell io.github.qempexe.omaudix set <key> <value>` reaches every one of them.
 
-Inline form in `~/.config/omarchy/shell.json`:
+## From the command line
 
-```json
-{ "id": "io.github.qempexe.omaudix", "vizStyle": "ring", "vizSide": "both", "scrollDirection": "bounce" }
-```
-
-## Shell commands
-
-```
-omarchy-shell io.github.qempexe.omaudix status       # JSON: media, helper state, last error
-omarchy-shell io.github.qempexe.omaudix look neon    # a ready made look (classic, studio, neon, mirror, waves, pulse,
-                                                     #   cosmos, orbit, comet, scope, helix, minimal)
-omarchy-shell io.github.qempexe.omaudix nextLook     # the next ready made look
-omarchy-shell io.github.qempexe.omaudix undo         # back to before the last look
-omarchy-shell io.github.qempexe.omaudix save 3       # keep the current look in place 3 (1 to 12)
-omarchy-shell io.github.qempexe.omaudix saveNew      # keep it in the first free place
-omarchy-shell io.github.qempexe.omaudix load 3       # and wear it again
-omarchy-shell io.github.qempexe.omaudix exportLook   # the current look as one line of JSON
+```bash
+omarchy-shell io.github.qempexe.omaudix status        # what's playing, the players, the audio helper, as JSON
+omarchy-shell io.github.qempexe.omaudix look aurora   # a ready made look: classic studio pill neon glass aurora vinyl pulse
+                                                      #   cosmos city arcade deco salon waterfall fountain minimal
+omarchy-shell io.github.qempexe.omaudix nextLook      # the next ready made look
+omarchy-shell io.github.qempexe.omaudix undo          # back to before the last look
+omarchy-shell io.github.qempexe.omaudix save 3        # keep every setting in place 3 (1 to 12)
+omarchy-shell io.github.qempexe.omaudix saveNew       # in the first free place
+omarchy-shell io.github.qempexe.omaudix load 3        # bring all of it back
+omarchy-shell io.github.qempexe.omaudix exportLook    # the current look as one line of JSON
 omarchy-shell io.github.qempexe.omaudix importLook '{"vizStyle":"ring","colorMode":"rainbow"}'
-omarchy-shell io.github.qempexe.omaudix set vizWidth 96   # any setting, checked like the panel does
-omarchy-shell io.github.qempexe.omaudix cycleStyle   # next visualizer style (until shell restart)
-omarchy-shell io.github.qempexe.omaudix resetStyle
-omarchy-shell io.github.qempexe.omaudix restart      # restart the audio helper
-omarchy-shell io.github.qempexe.omaudix playPause | next | previous
+omarchy-shell io.github.qempexe.omaudix set vizWidth 96
+omarchy-shell io.github.qempexe.omaudix playPause     # also: next, previous
+omarchy-shell io.github.qempexe.omaudix switchPlayer org.mpris.MediaPlayer2.spotify
+omarchy-shell io.github.qempexe.omaudix cycleStyle    # step through the visuals until the shell restarts (resetStyle undoes it)
+omarchy-shell io.github.qempexe.omaudix restart       # restart the audio helper
 ```
 
-## How it works
+Imported looks carry look settings only, every value checked, so a look from someone else can never change which player you follow or what your mouse does.
+
+## Good to know
+
+- The visualizer listens to your system's output, not to one player, so a game or a video playing at the same time shows up in it too.
+- The audio helper runs only while something plays and a visualizer is showing; one helper serves every screen.
+- Cover colors are worked out from the cover the player already shows; nothing is downloaded or stored.
+- The text fields read at most 1024 bytes from the clipboard, through Ctrl+V or Shift+Insert, so a huge clipboard can never stall the shell.
+- Song titles are always shown as plain text.
+
+## Inside
 
 ```
-qml/Service.qml        -- reads the active MPRIS player (Quickshell.Services.Mpris), owns ONE helper process
-helper/viz.py          -- cava (or built-in FFT over pw-record) / oscilloscope -> one text frame per line
-qml/BarWidget.qml      -- layout, settings, clicks
-qml/bar/               -- Controls, Cover, MarqueeText, Visualizer
-qml/js/visuals/        -- one file per visualizer style
-qml/js/colors/         -- one file per color mode
-qml/js/parts/          -- the plate's ends, surfaces, lines and ornaments, painted by Paint.js
-qml/panel/             -- SettingsPopup, SettingRow, LooksPage: the settings panel
-qml/js/Schema.js       -- every setting: tab, options, default; the ready made looks
-qml/core/SettingsStore -- the saved overrides
+qml/
+├── Service.qml          the player, the audio helper, settings and looks, the theme's colors, commands
+├── BarWidget.qml        the widget on the bar
+├── bar/                 Visualizer, Cover, Plate, Controls, MarqueeText
+├── panel/               SettingsPopup, SettingRow, LooksPage, LookArt, AboutPage, SafeField
+├── core/SettingsStore   saved settings, written a moment after the last change
+└── js/
+    ├── Schema.js        every setting: its tab, options and default; the ready made looks
+    ├── Draw.js          what every visual draws with
+    ├── visuals/         one file per visual
+    ├── colors/          one file per color mode
+    ├── Style.js, Paint.js, Trace.js
+    └── parts/           the plate's ends, surfaces, lines and ornaments
+helper/viz.py            cava, or a built-in analyzer over pw-record, one frame per line
+assets/                  the logo, light and dark
+tests/                   node tests/test_parts.js · python3 tests/test_manifest.py · python3 tests/test_viz.py
 ```
 
-The visualizer reacts to your **system output** (default sink monitor), not to one specific
-player stream, and runs only while the selected player is playing. If a game or a second
-app is making sound at the same time, it will show up in the visualizer as well.
+New visuals and color modes are one small file each. [CONTRIBUTING.md](CONTRIBUTING.md) shows how.
 
-## Tests
+## Updating and removing
 
-```
-python3 tests/test_viz.py        # helper: FFT bands, scope, pacing, fake pw-record end to end
-python3 tests/test_manifest.py   # manifest vs. QML settings drift
-node tests/test_parts.js         # every visual and color mode, drawn at many sizes
+```bash
+omarchy plugin update io.github.qempexe.omaudix
+omarchy restart shell
 ```
 
-## Adding a visual or a color mode
-
-Each one is a single file. [CONTRIBUTING.md](CONTRIBUTING.md) walks through it.
-
-
+```bash
+omarchy plugin remove io.github.qempexe.omaudix
+rm -rf ~/.local/state/omarchy-omaudix     # settings and saved looks
+```
 
 ## Credits and thanks
 
@@ -233,11 +224,8 @@ Each one is a single file. [CONTRIBUTING.md](CONTRIBUTING.md) walks through it.
 
 ## Disclaimer
 
-Omaudix is an independent project. It is not affiliated with or endorsed by Omarchy,
-WaveBar, Spotify, YouTube Music or any other service or player mentioned here; those names
-are used only to describe what the widget can follow. Cover art is shown from the address
-the player provides and is never stored or redistributed.
+Omaudix is an independent project. It is not affiliated with or endorsed by Omarchy, WaveBar, Spotify, YouTube Music or any other service or player mentioned here; those names are used only to describe what the widget can follow. Cover art is shown from the address the player provides and is never stored or redistributed.
 
 ## License
 
-MIT
+[MIT](LICENSE)
