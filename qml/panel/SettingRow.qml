@@ -54,6 +54,11 @@ Item {
     property color schemeMono: "#f2f2f4"     // monochrome ink
     property string fontFamily: ""
     property color customColor: "#7aa2f7"
+    property string customColor2: "#f7768e"
+    property color accentColor: accent
+    property var themeColors: []
+    property var borderColors: []
+    property var coverColors: []
     property var demoSpectrum: []
     property var demoScope: []
 
@@ -341,6 +346,11 @@ Item {
                         vizStyle: root.kind === "viz" ? modelData : "bars"
                         colorMode: root.kind === "colors" ? modelData : "theme"
                         customColor: root.customColor
+                        customColor2: root.customColor2
+                        accent: root.accentColor
+                        themeColors: root.themeColors
+                        borderColors: root.borderColors
+                        coverColors: root.coverColors
                         foreground: root.barFg
                         count: 10
                     }

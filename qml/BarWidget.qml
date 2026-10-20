@@ -6,6 +6,7 @@ import "bar"
 import "panel"
 import "js/Visuals.js" as Visuals
 import "js/Schema.js" as Schema
+import "js/Cover.js" as CoverColors
 
 BarWidget {
     id: root
@@ -34,6 +35,10 @@ BarWidget {
     readonly property real vizHeight: Style.space(18)
     readonly property real vizItemWidth: Visuals.isSquare(effStyle) ? vizHeight + Style.space(2) : cfg.vizWidth
     readonly property color fg: bar ? bar.barForeground : Color.foreground
+    readonly property color accent: Color.accent
+    // the right one faces the left one when both show, unless told otherwise
+    readonly property string rightOrient: cfg.vizRightOrient !== "auto" ? cfg.vizRightOrient
+        : (cfg.vizSide === "both" ? "mirrored" : "normal")
     readonly property string fontName: bar ? bar.fontFamily : Style.font.family
 
     readonly property string label: {
@@ -150,6 +155,10 @@ BarWidget {
                     height: root.cfg.coverSize
                     source: root.albumArt
                     ink: root.fg
+                    shape: root.cfg.coverShape
+                    spin: root.cfg.coverSpin
+                    spinTime: root.cfg.spinTime
+                    playing: root.playing
                     visible: root.cfg.coverSide === "left"
                     anchors.verticalCenter: parent.verticalCenter
                 }
@@ -161,9 +170,15 @@ BarWidget {
                     vizStyle: root.effStyle
                     colorMode: root.cfg.colorMode
                     customColor: root.cfg.customColor
+                    customColor2: root.cfg.customColor2
                     foreground: root.fg
+                    accent: root.accent
+                    themeColors: root.service ? root.service.themePalette : []
+                    borderColors: root.service ? root.service.borderColors : []
+                    coverColors: root.service ? root.service.coverColors : []
                     count: root.cfg.barCount
                     visible: root.vizLeft
+                    orient: root.cfg.vizLeftOrient
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
@@ -172,6 +187,10 @@ BarWidget {
                     height: root.cfg.coverSize
                     source: root.albumArt
                     ink: root.fg
+                    shape: root.cfg.coverShape
+                    spin: root.cfg.coverSpin
+                    spinTime: root.cfg.spinTime
+                    playing: root.playing
                     visible: root.cfg.coverSide === "center"
                     anchors.verticalCenter: parent.verticalCenter
                 }
@@ -202,10 +221,15 @@ BarWidget {
                     vizStyle: root.effStyle
                     colorMode: root.cfg.colorMode
                     customColor: root.cfg.customColor
+                    customColor2: root.cfg.customColor2
                     foreground: root.fg
+                    accent: root.accent
+                    themeColors: root.service ? root.service.themePalette : []
+                    borderColors: root.service ? root.service.borderColors : []
+                    coverColors: root.service ? root.service.coverColors : []
                     count: root.cfg.barCount
                     visible: root.vizRight
-                    flip: root.cfg.vizSide === "both"
+                    orient: root.rightOrient
                     anchors.verticalCenter: parent.verticalCenter
                 }
 
@@ -214,6 +238,10 @@ BarWidget {
                     height: root.cfg.coverSize
                     source: root.albumArt
                     ink: root.fg
+                    shape: root.cfg.coverShape
+                    spin: root.cfg.coverSpin
+                    spinTime: root.cfg.spinTime
+                    playing: root.playing
                     visible: root.cfg.coverSide === "right"
                     anchors.verticalCenter: parent.verticalCenter
                 }
@@ -285,6 +313,10 @@ BarWidget {
             height: root.cfg.coverSize
             source: root.albumArt
             ink: root.fg
+            shape: root.cfg.coverShape
+            spin: root.cfg.coverSpin
+            spinTime: root.cfg.spinTime
+            playing: root.playing
             visible: root.cfg.coverSide !== "hidden"
             anchors.horizontalCenter: parent.horizontalCenter
         }
@@ -312,9 +344,15 @@ BarWidget {
                 rotation: 90
                 levels: root.service ? root.service.levels : []
                 vizStyle: root.effStyle
+                orient: root.cfg.vizLeftOrient
                 colorMode: root.cfg.colorMode
                 customColor: root.cfg.customColor
+                customColor2: root.cfg.customColor2
                 foreground: root.fg
+                accent: root.accent
+                themeColors: root.service ? root.service.themePalette : []
+                borderColors: root.service ? root.service.borderColors : []
+                coverColors: root.service ? root.service.coverColors : []
                 count: 12
             }
 
@@ -339,6 +377,34 @@ BarWidget {
                 root.tip(gearV, false, "")
                 settingsPopup.toggle()
             }
+        }
+    }
+
+    // ---- the cover's colors ------------------------------------------------------
+    // For the Cover color mode: the cover drawn small, and its main colors handed to
+    // the service. Only while that mode is on.
+    Canvas {
+        id: coverSampler
+        width: 16
+        height: 16
+        opacity: 0.01
+        z: -1
+        renderTarget: Canvas.Image
+        readonly property string url: root.cfg.colorMode === "cover" && root.albumArt !== "" ? root.albumArt : ""
+        onUrlChanged: {
+            if (url === "") return
+            if (!isImageLoaded(url)) loadImage(url)
+            requestPaint()
+        }
+        onImageLoaded: requestPaint()
+        onPaint: {
+            if (url === "" || !isImageLoaded(url) || !root.service) return
+            const ctx = getContext("2d")
+            ctx.reset()
+            ctx.drawImage(url, 0, 0, width, height)
+            let data = []
+            try { data = ctx.getImageData(0, 0, width, height).data } catch (e) { data = [] }
+            root.service.coverColors = CoverColors.colorsOf(data, 3)
         }
     }
 

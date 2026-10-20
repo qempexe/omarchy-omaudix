@@ -12,6 +12,8 @@ const Draw = load(js("Draw.js"));
 const Visuals = load(js("Visuals.js"));
 const Colors = load(js("Colors.js"));
 const Schema = load(js("Schema.js"));
+const Theme = load(js("Theme.js"));
+const Cover = load(js("Cover.js"));
 const manifest = JSON.parse(fs.readFileSync(path.join(ROOT, "manifest.json"), "utf8"));
 const schemaOf = (key) => manifest.barWidget.schema.find((s) => s.key === key);
 
@@ -205,6 +207,34 @@ test("your own places keep every setting and give all of it back", () => {
     assert.strictEqual(JSON.stringify(back), JSON.stringify(kept));
     assert.strictEqual(Schema.cleanSettings({ fps: 9999, nonsense: 1 }).fps, 60);
     assert.strictEqual(Schema.cleanSettings({ nonsense: 1 }), null);
+});
+
+test("theme colors: named colors, old colorN themes, and the window border three ways", () => {
+    const toml = 'accent = "#a586fd"\nred = "#12aa8a"\ngreen = "#32e881"\nbright_red = "#3dcca8"\nhyprland_active_border = "rgba(12e8daee) rgba(a586fdee) 45deg"\n';
+    assert.strictEqual(JSON.stringify(Theme.parsePalette(toml)), '["#12aa8a","#32e881","#3dcca8"]');
+    assert.strictEqual(JSON.stringify(Theme.parsePalette('color1 = "#111111"\ncolor2 = "#222222"')), '["#111111","#222222"]');
+    const b = Theme.parseBorder(toml);
+    assert.strictEqual(JSON.stringify(b.colors), '["#12e8da","#a586fd"]');
+    assert.strictEqual(b.angle, 45);
+    const lua = Theme.parseBorder('local active_border_color = { colors = { "rgba(1ee9d6ee)", "rgba(fe4fb6ee)" }, angle = 30 }\nlocal inactive_border_color = "rgba(356d76aa)"');
+    assert.strictEqual(JSON.stringify(lua.colors), '["#1ee9d6","#fe4fb6"]');
+    assert.strictEqual(lua.angle, 30);
+    assert.strictEqual(Theme.parseBorder('inactive_border = rgba(ffffffff)').colors.length, 0);
+    assert.strictEqual(Theme.parsePalette("x".repeat(70000)).length, 0);
+});
+
+test("cover colors: the main colors of a picture, distinct, and never too dark", () => {
+    const px = [];
+    for (let i = 0; i < 60; i++) px.push(230, 120, 40, 255);     // orange, most of it
+    for (let i = 0; i < 30; i++) px.push(40, 70, 200, 255);      // blue
+    for (let i = 0; i < 10; i++) px.push(10, 10, 10, 255);       // black
+    for (let i = 0; i < 10; i++) px.push(255, 0, 0, 0);          // see-through: ignored
+    const out = Cover.colorsOf(px, 3);
+    assert.ok(out.length >= 2);
+    assert.ok(out[0][0] > 200 && out[0][2] < 80, "orange first: " + JSON.stringify(out));
+    assert.ok(out[1][2] > 150, "blue second");
+    for (const c of out) assert.ok((0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2]) / 255 >= 0.27);
+    assert.strictEqual(Cover.colorsOf([], 3).length, 0);
 });
 
 console.log(passed + " passed");

@@ -312,8 +312,25 @@ PopupWindow {
         root.tab = (root.tab + d + root.tabs.length) % root.tabs.length
     }
 
-    // colors the look tiles can draw with
-    readonly property var lookColors: ({})
+    // the colors the color modes build from, for the previews and tiles
+    readonly property color themeAccent: Color.accent
+    readonly property var themeColors: root.svc ? root.svc.themePalette : []
+    readonly property var borderColors: root.svc ? root.svc.borderColors : []
+    readonly property var coverColors: root.svc ? root.svc.coverColors : []
+    function hexes(list) {
+        const out = []
+        for (const h of list || []) {
+            const m = /^#([0-9a-fA-F]{6})$/.exec(String(h))
+            if (m) out.push([parseInt(m[1].substr(0, 2), 16), parseInt(m[1].substr(2, 2), 16), parseInt(m[1].substr(4, 2), 16)])
+        }
+        return out
+    }
+    readonly property var lookColors: ({
+        accent: [root.themeAccent.r * 255, root.themeAccent.g * 255, root.themeAccent.b * 255],
+        palette: root.hexes(root.themeColors),
+        border: root.hexes(root.borderColors),
+        cover: root.coverColors
+    })
     // ---- clipboard paste for text fields ---------------------------------------
     // Native paste is disabled in SettingRow. A paste request runs a fixed command
     // that reads at most `pasteMaxBytes` from the clipboard, and the text is handed
@@ -539,30 +556,17 @@ PopupWindow {
                         Layout.fillWidth: true
                         spacing: 12
 
-                        Rectangle {
+                        Cover {
                             visible: root.cfg.showAlbumArt === true
                             Layout.preferredWidth: 52
                             Layout.preferredHeight: 52
-                            radius: 8
-                            color: root.tint(0.08)
-                            clip: true
-
-                            Image {
-                                anchors.fill: parent
-                                source: root.albumArt
-                                fillMode: Image.PreserveAspectCrop
-                                visible: root.albumArt !== ""
-                                asynchronous: true
-                            }
-                            Text {
-                                textFormat: Text.PlainText  // metadata is untrusted: never auto-detect rich text
-                                anchors.centerIn: parent
-                                text: "\u266B"
-                                color: root.ink
-                                opacity: 0.35
-                                font.pixelSize: 22
-                                visible: root.albumArt === ""
-                            }
+                            corner: 8
+                            source: root.albumArt
+                            ink: root.ink
+                            shape: String(root.cfg.coverShape)
+                            spin: String(root.cfg.coverSpin)
+                            spinTime: Number(root.cfg.spinTime)
+                            playing: root.svc ? root.svc.playing : false
                         }
 
                         ColumnLayout {
@@ -656,6 +660,12 @@ PopupWindow {
                             height: Visuals.isSquare(root.previewStyle) ? 28 : 26
                             levels: root.previewLevels
                             vizStyle: root.previewStyle
+                            orient: String(root.cfg.vizLeftOrient)
+                            customColor2: String(root.cfg.customColor2)
+                            accent: root.themeAccent
+                            themeColors: root.themeColors
+                            borderColors: root.borderColors
+                            coverColors: root.coverColors
                             colorMode: String(root.cfg.colorMode)
                             customColor: String(root.cfg.customColor)
                             foreground: root.fg
@@ -793,6 +803,7 @@ PopupWindow {
                             inkOnFg: root.inkOnFg
                             fontFamily: root.fontFamily
                             levels: root.demoSpectrum
+                            colorCtx: root.lookColors
                         }
 
                     // ---- Player tab ----------------------------------------------
@@ -1011,6 +1022,11 @@ PopupWindow {
                                     barFg: root.fg
                                     fontFamily: root.fontFamily
                                     customColor: String(root.cfg.customColor)
+                                    customColor2: String(root.cfg.customColor2)
+                                    accentColor: root.themeAccent
+                                    themeColors: root.themeColors
+                                    borderColors: root.borderColors
+                                    coverColors: root.coverColors
                                     schemeAccent: root.themeAccentColor ? root.themeAccentColor : root.accent
                                     schemeBg: root.themeBgColor ? root.themeBgColor : root.panelSolid
                                     schemeCustom: root.customAccentColor ? root.customAccentColor : root.accent

@@ -31,10 +31,13 @@
     "defaults": {
       "vizStyle": "bars",
       "vizSide": "left",
+      "vizLeftOrient": "normal",
+      "vizRightOrient": "auto",
       "vizWidth": 72,
       "barCount": 20,
       "colorMode": "theme",
       "customColor": "#7aa2f7",
+      "customColor2": "#f7768e",
       "panelColor": "theme",
       "panelCustomColor": "#7aa2f7",
       "sensitivity": 100,
@@ -54,12 +57,14 @@
       "showControls": true,
       "controlsSide": "right",
       "hideWhenPaused": false,
-      "clickAction": "playPause",
-      "wheelAction": "track",
-      "showAlbumArt": true,
       "pauseOthers": false,
       "coverSide": "hidden",
-      "coverSize": 16
+      "coverSize": 16,
+      "coverShape": "square",
+      "coverSpin": "off",
+      "clickAction": "playPause",
+      "wheelAction": "track",
+      "showAlbumArt": true
     },
     "schema": [
       {
@@ -109,6 +114,33 @@
         "description": "Which side of the text the visualizer sits on. 'both' mirrors it on each side."
       },
       {
+        "key": "vizLeftOrient",
+        "type": "enum",
+        "label": "Left visualizer",
+        "options": [
+          "normal",
+          "flipped",
+          "mirrored",
+          "turned"
+        ],
+        "defaultValue": "normal",
+        "description": "normal, flipped (upside down), mirrored (right to left) or turned (both)."
+      },
+      {
+        "key": "vizRightOrient",
+        "type": "enum",
+        "label": "Right visualizer",
+        "options": [
+          "auto",
+          "normal",
+          "flipped",
+          "mirrored",
+          "turned"
+        ],
+        "defaultValue": "auto",
+        "description": "auto mirrors it when both sides show; or normal, flipped, mirrored, turned."
+      },
+      {
         "key": "vizWidth",
         "type": "integer",
         "label": "Visualizer width",
@@ -136,10 +168,17 @@
           "theme",
           "fade",
           "rainbow",
-          "custom"
+          "custom",
+          "gradient",
+          "palette",
+          "border",
+          "cover",
+          "heat",
+          "pulse",
+          "duotone"
         ],
         "defaultValue": "theme",
-        "description": "theme follows the bar foreground; fade ramps its opacity; rainbow shifts hue; custom uses the color below."
+        "description": "theme follows the bar text; fade ramps its opacity; rainbow shifts hue; custom uses the color below; gradient runs from it to the second color; palette uses the theme's colors; border the active window border; cover the song's cover; heat goes from blue to red with loudness; pulse flares the accent on the beat; duotone puts loud parts in the accent."
       },
       {
         "key": "customColor",
@@ -147,6 +186,13 @@
         "label": "Custom color",
         "defaultValue": "#7aa2f7",
         "description": "Hex color like #7aa2f7 (used when Color mode is custom)."
+      },
+      {
+        "key": "customColor2",
+        "type": "string",
+        "label": "Second color",
+        "defaultValue": "#f7768e",
+        "description": "Hex color where the gradient ends (Color mode gradient)."
       },
       {
         "key": "panelColor",
@@ -359,6 +405,29 @@
         "step": 2,
         "defaultValue": 16,
         "description": "Size of the cover on the bar."
+      },
+      {
+        "key": "coverShape",
+        "type": "enum",
+        "label": "Cover shape",
+        "options": [
+          "square",
+          "circle"
+        ],
+        "defaultValue": "square",
+        "description": "Square or round cover, on the bar and in the settings panel."
+      },
+      {
+        "key": "coverSpin",
+        "type": "enum",
+        "label": "Spin the round cover",
+        "options": [
+          "off",
+          "left",
+          "right"
+        ],
+        "defaultValue": "off",
+        "description": "A round cover turns like a record while music plays."
       },
       {
         "key": "clickAction",

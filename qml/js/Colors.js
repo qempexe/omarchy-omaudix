@@ -4,6 +4,13 @@
 .import "colors/fade.js" as Fade
 .import "colors/rainbow.js" as Rainbow
 .import "colors/custom.js" as Custom
+.import "colors/gradient.js" as Gradient
+.import "colors/palette.js" as Palette
+.import "colors/border.js" as Border
+.import "colors/cover.js" as Cover
+.import "colors/heat.js" as Heat
+.import "colors/pulse.js" as Pulse
+.import "colors/duotone.js" as Duotone
 
 // Every color mode for the visualizer, in the order the settings show them. Each one
 // lives in its own file under colors/ (see CONTRIBUTING.md).
@@ -19,7 +26,14 @@ var list = [
     Theme.color,
     Fade.color,
     Rainbow.color,
-    Custom.color
+    Custom.color,
+    Gradient.color,
+    Palette.color,
+    Border.color,
+    Cover.color,
+    Heat.color,
+    Pulse.color,
+    Duotone.color
 ];
 
 var byKey = {};

@@ -18,16 +18,17 @@ Canvas {
     onKeyChanged: requestPaint()
     onVisibleChanged: if (visible) requestPaint()
 
-    function vizIn(ctx, x, y, w, h, flip) {
+    function vizIn(ctx, x, y, w, h, orient) {
         const v = root.look || ({})
         const style = Visuals.byKey[v.vizStyle] || Visuals.byKey.bars
         if (style.square) { x += (w - h) / 2; w = h }
         ctx.save()
         ctx.translate(x, y)
-        if (flip) { ctx.translate(w, 0); ctx.scale(-1, 1) }
+        const across = orient === "mirrored" || orient === "turned", upside = orient === "flipped" || orient === "turned"
+        if (across || upside) { ctx.translate(across ? w : 0, upside ? h : 0); ctx.scale(across ? -1 : 1, upside ? -1 : 1) }
         const st = Draw.freshState()
         Draw.advance(st, root.levels)
-        const cc = Object.assign({ fg: [root.fg.r * 255, root.fg.g * 255, root.fg.b * 255] }, root.colorCtx, { custom: Draw.hex(v.customColor) })
+        const cc = Object.assign({ fg: [root.fg.r * 255, root.fg.g * 255, root.fg.b * 255] }, root.colorCtx, { custom: Draw.hex(v.customColor), custom2: Draw.hex(v.customColor2), level: st.level })
         const g = Draw.make({ ctx: ctx, w: w, h: h, levels: root.levels, st: st, mem: {}, count: Math.min(14, v.barCount || 14),
                               colorCtx: cc, colorAt: (t, lv, c) => Colors.at(v.colorMode, t, lv, c) })
         try { style.draw(g) } catch (e) { }
@@ -48,7 +49,7 @@ Canvas {
         const textW = W - (left ? vw + 4 : 0) - (right ? vw + 4 : 0) - (cover ? vh + 4 : 0)
         let x = 0
         if (cover && v.coverSide === "left") { drawCover(ctx, x, vy, vh); x += vh + 4 }
-        if (left) { vizIn(ctx, x, vy, vw, vh, false); x += vw + 4 }
+        if (left) { vizIn(ctx, x, vy, vw, vh, v.vizLeftOrient || "normal"); x += vw + 4 }
         if (cover && v.coverSide === "center") { drawCover(ctx, x, vy, vh); x += vh + 4 }
         // the title, as two soft lines of "text"
         ctx.fillStyle = Qt.rgba(root.fg.r, root.fg.g, root.fg.b, 0.35)
@@ -58,7 +59,8 @@ Canvas {
         ctx.roundedRect(x + tw * 0.68, H / 2 - 1.5, tw * 0.28, 3, 1.5, 1.5)
         ctx.fill()
         x += tw + 4
-        if (right) { vizIn(ctx, x, vy, vw, vh, side === "both"); x += vw + 4 }
+        const ro = !v.vizRightOrient || v.vizRightOrient === "auto" ? (side === "both" ? "mirrored" : "normal") : v.vizRightOrient
+        if (right) { vizIn(ctx, x, vy, vw, vh, ro); x += vw + 4 }
         if (cover && v.coverSide === "right") drawCover(ctx, x, vy, vh)
     }
 

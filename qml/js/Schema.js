@@ -12,6 +12,7 @@
 
 var PALETTE = ["#7aa2f7", "#bb9af7", "#7dcfff", "#9ece6a", "#e0af68", "#ff9e64", "#f7768e", "#c0caf5"];
 var SLOTS = 12;
+var ORIENT = { normal: "Normal", flipped: "Upside down", mirrored: "Mirrored", turned: "Turned" };
 
 function lr(extra) {
     const out = { left: "Left", right: "Right" };
@@ -45,6 +46,15 @@ var tabs = [
             { key: "vizWidth", label: "Width", kind: "int", fallback: 72, min: 24, max: 240, step: 4,
               hint: "How wide it is. Round styles always stay square.",
               when: [{ key: "vizSide", is: ["left", "right", "both"] }] },
+            { key: "vizLeftOrient", label: "Left one", kind: "enum", fallback: "normal",
+              options: ["normal", "flipped", "mirrored", "turned"], labels: ORIENT,
+              hint: "Upside down hangs it from the top, mirrored runs it right to left, turned does both. Also used on a side bar.",
+              when: [{ key: "vizSide", is: ["left", "both"] }] },
+            { key: "vizRightOrient", label: "Right one", kind: "enum", fallback: "auto",
+              options: ["auto", "normal", "flipped", "mirrored", "turned"],
+              labels: { auto: "Auto", normal: "Normal", flipped: "Upside down", mirrored: "Mirrored", turned: "Turned" },
+              hint: "Auto mirrors it when both sides show, so the two face each other.",
+              when: [{ key: "vizSide", is: ["right", "both"] }] },
             { key: "barCount", label: "Bar count", kind: "int", fallback: 20, min: 6, max: 64, step: 2,
               hint: "Fewer looks chunky, more looks fine. Used by bar-like styles." }
         ] },
@@ -67,7 +77,10 @@ var tabs = [
               hint: "Theme follows your bar." },
             { key: "customColor", label: "Custom color", kind: "color", fallback: "#7aa2f7", presets: PALETTE,
               hint: "Pick one, or type a hex like #7aa2f7.",
-              when: [{ key: "colorMode", is: ["custom"] }] }
+              when: [{ key: "colorMode", is: ["custom", "gradient"] }] },
+            { key: "customColor2", label: "Second color", kind: "color", fallback: "#f7768e", presets: PALETTE,
+              hint: "Where the gradient ends, on the right.",
+              when: [{ key: "colorMode", is: ["gradient"] }] }
         ] },
         { title: "This panel", items: [
             { key: "panelColor", label: "Panel colors", kind: "scheme", fallback: "theme",
@@ -124,6 +137,18 @@ var tabs = [
             { key: "coverSize", label: "Cover size", kind: "int", fallback: 16, min: 10, max: 36, step: 2,
               hint: "How big the cover is on the bar.",
               when: [{ key: "coverSide", is: ["left", "center", "right"] }] }
+        ] },
+        { title: "Shape", items: [
+            { key: "coverShape", label: "Shape", kind: "enum", fallback: "square",
+              options: ["square", "circle"], labels: { square: "Square", circle: "Circle" },
+              hint: "On the bar and in this panel." },
+            { key: "coverSpin", label: "Spin like a record", kind: "enum", fallback: "off",
+              options: ["off", "left", "right"], labels: { off: "Off", left: "To the left", right: "To the right" },
+              hint: "A round cover turns while the music plays and stops when it pauses.",
+              when: [{ key: "coverShape", is: ["circle"] }] },
+            { key: "spinTime", label: "Seconds per turn", kind: "int", fallback: 8, min: 2, max: 30, step: 1,
+              hint: "Lower spins faster.",
+              when: [{ key: "coverShape", is: ["circle"] }, { key: "coverSpin", is: ["left", "right"] }] }
         ] },
         { title: "In this panel", items: [
             { key: "showAlbumArt", label: "Cover in this panel", kind: "bool", fallback: true,

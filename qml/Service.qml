@@ -2,9 +2,11 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Mpris
+import qs.Commons
 import "core"
 import "js/Visuals.js" as Visuals
 import "js/Schema.js" as Schema
+import "js/Theme.js" as Theme
 
 // Shared brain of Omaudix. Reads the active MPRIS player
 // and runs ONE audio helper (viz.py) for every widget instance.
@@ -91,6 +93,74 @@ Item {
     function importLook(text) {
         if (typeof text !== "string" || text.length > 8192) return false
         try { return wear(JSON.parse(text)) } catch (e) { return false }
+    }
+
+    // ---- the theme's colors -------------------------------------------------------
+    // For the Palette and Window border color modes: the theme's named colors from
+    // colors.toml, and the active window border from hyprland.lua (or .conf, or the
+    // hyprland_active_border line some themes keep in colors.toml).
+    property var themePalette: []                       // ["#rrggbb", ...]
+    property var tomlBorder: ({ colors: [], angle: 0 })
+    property var luaBorder: ({ colors: [], angle: 0 })
+    property var confBorder: ({ colors: [], angle: 0 })
+    property bool luaMissing: false
+    readonly property var borderColors: luaBorder.colors.length > 0 ? luaBorder.colors
+        : (confBorder.colors.length > 0 ? confBorder.colors : tomlBorder.colors)
+    readonly property string themeDir: {
+        try { return Color.currentThemePath ? String(Color.currentThemePath) : "" } catch (e) { return "" }
+    }
+
+    // the cover's main colors, worked out by the widget that shows it
+    property var coverColors: []
+    onAlbumArtChanged: coverColors = []
+
+    function fileText(fv) {
+        try { const t = typeof fv.text === "function" ? fv.text() : fv.text; return typeof t === "string" ? t : "" } catch (e) { return "" }
+    }
+    FileView {
+        id: paletteFile
+        path: root.themeDir !== "" ? root.themeDir + "/colors.toml" : ""
+        watchChanges: true
+        onFileChanged: reload()
+        onLoaded: {
+            const t = root.fileText(paletteFile)
+            root.themePalette = Theme.parsePalette(t)
+            root.tomlBorder = Theme.parseBorder(t)
+        }
+        onLoadFailed: { root.themePalette = []; root.retryTheme() }
+    }
+    FileView {
+        id: borderLua
+        path: root.themeDir !== "" ? root.themeDir + "/hyprland.lua" : ""
+        watchChanges: true
+        onFileChanged: reload()
+        onLoaded: { root.luaMissing = false; root.luaBorder = Theme.parseBorder(root.fileText(borderLua)) }
+        onLoadFailed: { root.luaBorder = ({ colors: [], angle: 0 }); root.luaMissing = true }
+    }
+    FileView {
+        id: borderConf
+        // only looked at when the theme has no hyprland.lua
+        path: root.themeDir !== "" && root.luaMissing ? root.themeDir + "/hyprland.conf" : ""
+        watchChanges: true
+        onFileChanged: reload()
+        onPathChanged: if (path === "") root.confBorder = ({ colors: [], angle: 0 })
+        onLoaded: root.confBorder = Theme.parseBorder(root.fileText(borderConf))
+        onLoadFailed: root.confBorder = ({ colors: [], angle: 0 })
+    }
+    // A theme switch replaces the theme folder, so for a moment the files are gone and
+    // the watch can lose track of them: read them again shortly after, a few times at most.
+    property int themeTries: 0
+    function retryTheme() { if (themeTries < 3) { themeTries++; themeRetry.restart() } }
+    Timer {
+        id: themeRetry
+        interval: 800
+        onTriggered: { paletteFile.reload(); borderLua.reload(); borderConf.reload() }
+    }
+    Connections {
+        target: Color
+        ignoreUnknownSignals: true
+        function onAccentChanged() { root.themeTries = 0; themeRetry.restart() }
+        function onBackgroundChanged() { root.themeTries = 0; themeRetry.restart() }
     }
 
     // ---- at login ---------------------------------------------------------------------
