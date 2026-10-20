@@ -88,7 +88,8 @@ var list = [
         if (!(p.line)) return;
         // a glowing tube: a wide soft glow, then a thin bright core
         var nw = Math.max(1, lw);
-        ctx.shadowBlur = 12;
+        // as soft as the room around the shape allows, so the glow never ends in a hard box
+        ctx.shadowBlur = Math.min(12, Math.max(2, (typeof p.margin === "number" ? p.margin : 8) * 1.5));
         ctx.shadowColor = p.line;
         ctx.strokeStyle = lineStyle;
         ctx.lineWidth = nw + 1;

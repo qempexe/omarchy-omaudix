@@ -302,7 +302,8 @@ var list = [
         var ctx = g.ctx, ink = g.ink, x0 = g.x0, L = g.L;
         if (!ink) return;
         ctx.save();
-        ctx.shadowBlur = 10;
+        // as soft as the room around the shape allows
+        ctx.shadowBlur = Math.min(10, Math.max(2, (typeof g.p.margin === "number" ? g.p.margin : 8) * 1.3));
         ctx.shadowColor = ink;
         ctx.fillStyle = ink;
         var gy0 = g.inner === "end" ? g.y1 - 2 : g.y0;
