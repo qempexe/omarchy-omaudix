@@ -167,6 +167,8 @@ qml/Service.qml        -- reads the active MPRIS player (Quickshell.Services.Mpr
 helper/viz.py          -- cava (or built-in FFT over pw-record) / oscilloscope -> one text frame per line
 qml/BarWidget.qml      -- layout, settings, clicks
 qml/bar/               -- Controls, Cover, MarqueeText, Visualizer
+qml/js/visuals/        -- one file per visualizer style
+qml/js/colors/         -- one file per color mode
 qml/panel/             -- SettingsPopup, SettingRow: the settings panel
 qml/core/SettingsStore -- the saved overrides
 ```
@@ -180,7 +182,12 @@ app is making sound at the same time, it will show up in the visualizer as well.
 ```
 python3 tests/test_viz.py        # helper: FFT bands, scope, pacing, fake pw-record end to end
 python3 tests/test_manifest.py   # manifest vs. QML settings drift
+node tests/test_parts.js         # every visual and color mode, drawn at many sizes
 ```
+
+## Adding a visual or a color mode
+
+Each one is a single file. [CONTRIBUTING.md](CONTRIBUTING.md) walks through it.
 
 
 
