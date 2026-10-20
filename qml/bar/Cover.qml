@@ -89,24 +89,34 @@ Item {
             opacity: 0.6
             font.pixelSize: Math.max(8, Math.round(root.height * 0.6))
         }
+    }
 
-        RotationAnimation on rotation {
-            id: turn
-            running: root.spinning
-            paused: running && !root.playing
-            loops: Animation.Infinite
-            from: 0
-            to: root.spin === "left" ? -360 : 360
-            duration: Math.max(2, root.spinTime) * 1000
-            direction: root.spin === "left" ? RotationAnimation.Counterclockwise : RotationAnimation.Clockwise
-        }
+    // The turn is set up by hand rather than through bindings: a restart from a change
+    // handler used to run before the bindings had caught up, so the cover kept the
+    // previous direction until the next change.
+    RotationAnimation {
+        id: turn
+        target: disc
+        property: "rotation"
+        loops: Animation.Infinite
+        direction: RotationAnimation.Numerical
+        paused: running && !root.playing
+    }
+
+    function applySpin() {
+        turn.stop()
+        if (!root.spinning) { disc.rotation = 0; return }
+        const way = root.spin === "left" ? -1 : 1
+        turn.from = 0
+        turn.to = 360 * way
+        turn.duration = Math.max(2, root.spinTime) * 1000
+        turn.start()
     }
 
     onSourceChanged: roundArt.take(source)
     onRoundChanged: roundArt.take(source)
-    onSpinningChanged: if (!spinning) disc.rotation = 0
-    // a new direction or speed starts the turn again
-    onSpinChanged: if (spinning) turn.restart()
-    onSpinTimeChanged: if (spinning) turn.restart()
-    Component.onCompleted: roundArt.take(source)
+    onSpinningChanged: Qt.callLater(applySpin)
+    onSpinChanged: Qt.callLater(applySpin)
+    onSpinTimeChanged: Qt.callLater(applySpin)
+    Component.onCompleted: { roundArt.take(source); applySpin() }
 }
