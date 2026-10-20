@@ -21,7 +21,9 @@ ColumnLayout {
         Layout.topMargin: 8
         Layout.preferredWidth: 84
         Layout.preferredHeight: 84
-        source: Qt.resolvedUrl("../../assets/logo.png")
+        // the light logo on a dark panel, the dark one on a light panel
+        source: Qt.resolvedUrl(root.ink.r * 0.299 + root.ink.g * 0.587 + root.ink.b * 0.114 > 0.5
+                               ? "../../assets/logo.png" : "../../assets/logo-dark.png")
         sourceSize.width: 168
         sourceSize.height: 168
         smooth: true
