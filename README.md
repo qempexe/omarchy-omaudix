@@ -11,14 +11,18 @@ A now-playing widget for the Omarchy bar: live visualizer, fixed-width scrolling
 
 ## Features
 
-- **20 visualizer styles**: the originals `bars`, `mirror`, `wave` (smooth blob), `scope` (real
-  oscilloscope), `dots`, `led` (segmented meter), `ring` (radial) and `area` (filled mountain), plus
-  `peaks` (bars with falling caps), `capsules` (rounded pills growing from the middle), `steps`
-  (blocky staircase), `neon` (glowing spectrum line), `lightning` (jagged bolt through the middle),
-  `heartbeat` (ECG trace), `ripple` (travelling sine with a reflection), `helix` (twisting double
-  strand), `comet` (bright head dragging a tail where the energy sits), `stellar` (stars that sparkle
-  with the music), `meter` (horizontal level meter with a falling peak marker) and `orb` (pulsing sphere).
-- **4 color modes**: follow the bar theme, fade, rainbow, or your own hex color.
+- **24 visualizer styles**: `bars`, `mirror`, `wave`, `scope` (real oscilloscope), `dots`, `led`,
+  `ring`, `area`, `peaks`, `capsules`, `steps`, `neon`, `lightning`, `heartbeat`, `ripple`, `helix`,
+  `comet`, `stellar`, `meter`, `orb`, `waterfall` (a spectrogram that scrolls down), `fountain`
+  (sparks thrown up by each band), `vinyl` (a turning record with the spectrum round its rim) and
+  `skyline` (a city whose windows light up with the music).
+- **11 color modes**: theme, fade, rainbow, custom, a gradient between two colors, your theme's
+  palette, your window border's gradient, colors taken from the song's cover, heat (blue when quiet,
+  red when loud), pulse (the accent flaring on the beat) and duotone.
+- **Upside down, mirrored or both**: each side's visualizer has its own orientation, so with both
+  sides showing they can face each other, hang from the top, or any mix of the two.
+- **Round covers that spin**: the cover can be square or round, and a round one turns like a record
+  while the music plays, to the left or to the right.
 - **Settings panel colors**: the settings panel itself can `theme` (bring your Omarchy theme's
   accent and background into the panel), use a `custom` accent hex, or stay `monochrome` (neutral grey).
   Text always follows the bar foreground. If the shell exposes no theme accent, `theme` looks like `monochrome`.
@@ -110,11 +114,16 @@ All of these appear in Omarchy's widget settings UI.
 
 | Setting | Values | Default |
 | --- | --- | --- |
-| `vizStyle` | bars, mirror, wave, scope, dots, led, ring, area, peaks, capsules, steps, neon, lightning, heartbeat, ripple, helix, comet, stellar, meter, orb | bars |
+| `vizStyle` | bars, mirror, wave, scope, dots, led, ring, area, peaks, capsules, steps, neon, lightning, heartbeat, ripple, helix, comet, stellar, meter, orb, waterfall, fountain, vinyl, skyline | bars |
 | `vizSide` | left, right, both, hidden | left |
 | `vizWidth` | 24-240 px | 72 |
 | `barCount` | 6-64 | 20 |
-| `colorMode` | theme, fade, rainbow, custom | theme |
+| `colorMode` | theme, fade, rainbow, custom, gradient, palette, border, cover, heat, pulse, duotone | theme |
+| `customColor2` | hex, where the gradient ends | #f7768e |
+| `vizLeftOrient` | normal, flipped, mirrored, turned | normal |
+| `vizRightOrient` | auto, normal, flipped, mirrored, turned | auto |
+| `coverShape` | square, circle | square |
+| `coverSpin` | off, left, right | off |
 | `customColor` | hex like `#7aa2f7` | #7aa2f7 |
 | `panelColor` | theme, custom, monochrome (colors of the settings panel) | theme |
 | `panelCustomColor` | hex like `#7aa2f7` (used when `panelColor` is custom) | #7aa2f7 |
