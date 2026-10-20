@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import "../bar"
+import "../js/Visuals.js" as Visuals
 
 // One setting in the popup: a label + plain-language hint on the left, the
 // current value / reset on the right, and a purpose-built control underneath.
@@ -483,7 +484,7 @@ Item {
                 delegate: Rectangle {
                     id: tile
                     readonly property bool on: root.same(root.value, modelData)
-                    readonly property bool isRing: root.kind === "viz" && modelData === "ring"
+                    readonly property bool isRing: root.kind === "viz" && Visuals.isSquare(modelData)
                     Layout.preferredWidth: Math.floor((root.width - (root.kind === "scheme" ? 16 : 24)) / (root.kind === "scheme" ? 3 : 4))
                     Layout.preferredHeight: root.kind === "scheme" ? 62 : 54
                     radius: 8
@@ -498,7 +499,7 @@ Item {
                         y: 9
                         width: tile.isRing ? 24 : parent.width - 24
                         height: 24
-                        levels: (root.kind === "viz" && modelData === "scope")
+                        levels: (root.kind === "viz" && Visuals.isScope(modelData))
                             ? root.demoScope : root.demoSpectrum
                         vizStyle: root.kind === "viz" ? modelData : "bars"
                         colorMode: root.kind === "colors" ? modelData : "theme"

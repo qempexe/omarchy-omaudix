@@ -5,6 +5,8 @@ import qs.Ui
 import "core"
 import "bar"
 import "panel"
+import "js/Visuals.js" as Visuals
+import "js/Colors.js" as Colors
 
 BarWidget {
     id: root
@@ -25,13 +27,13 @@ BarWidget {
     }
 
     // ---- settings: every key read here is declared in manifest.json --------
-    readonly property var styleChoices: ["bars", "mirror", "wave", "scope", "dots", "led", "ring", "area", "peaks", "capsules", "steps", "neon", "lightning", "heartbeat", "ripple", "helix", "comet", "stellar", "meter", "orb"]
+    readonly property var styleChoices: Visuals.keys
 
     readonly property string styleSetting: pick(over("vizStyle", setting("vizStyle", "bars")), styleChoices, "bars")
     readonly property string vizSide: pick(over("vizSide", setting("vizSide", "left")), ["left", "right", "both", "hidden"], "left")
     readonly property int vizWidth: whole(over("vizWidth", setting("vizWidth", 72)), 24, 240, 72)
     readonly property int barCount: whole(over("barCount", setting("barCount", 20)), 6, 64, 20)
-    readonly property string colorMode: pick(over("colorMode", setting("colorMode", "theme")), ["theme", "fade", "rainbow", "custom"], "theme")
+    readonly property string colorMode: pick(over("colorMode", setting("colorMode", "theme")), Colors.keys, "theme")
     readonly property string customColor: String(over("customColor", setting("customColor", "#7aa2f7")))
     readonly property string panelColor: pick(over("panelColor", setting("panelColor", "theme")), ["theme", "custom", "monochrome"], "theme")
     readonly property string panelCustomColor: String(over("panelCustomColor", setting("panelCustomColor", "#7aa2f7")))
@@ -90,7 +92,7 @@ BarWidget {
     readonly property bool vizLeft: vizSide === "left" || vizSide === "both"
     readonly property bool vizRight: vizSide === "right" || vizSide === "both"
     readonly property real vizHeight: Style.space(18)
-    readonly property bool squareStyle: effStyle === "ring" || effStyle === "orb"
+    readonly property bool squareStyle: Visuals.isSquare(effStyle)
     readonly property real vizItemWidth: squareStyle ? vizHeight + Style.space(2) : vizWidth
     readonly property color fg: bar ? bar.barForeground : Color.foreground
     readonly property string fontName: bar ? bar.fontFamily : Style.font.family

@@ -4,6 +4,8 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 import "../bar"
+import "../js/Visuals.js" as Visuals
+import "../js/Colors.js" as Colors
 
 // Floating settings panel for Omaudix.
 //
@@ -255,12 +257,8 @@ PopupWindow {
             title: "Look",
             items: [
                 { key: "vizStyle", label: "Style", kind: "viz", fallback: "bars",
-                  options: ["bars", "mirror", "wave", "scope", "dots", "led", "ring", "area", "peaks", "capsules", "steps", "neon", "lightning", "heartbeat", "ripple", "helix", "comet", "stellar", "meter", "orb"],
-                  labels: { bars: "Bars", mirror: "Mirror", wave: "Wave", scope: "Scope",
-                            dots: "Dots", led: "LED", ring: "Ring", area: "Area",
-                            peaks: "Peaks", capsules: "Capsules", steps: "Steps", neon: "Neon",
-                            lightning: "Lightning", heartbeat: "Heartbeat", ripple: "Ripple", helix: "Helix",
-                            comet: "Comet", stellar: "Stellar", meter: "Meter", orb: "Orb" },
+                  options: Visuals.keys,
+                  labels: Visuals.labels,
                   hint: "How the music is drawn. Scroll the wheel over the widget to flip through them." },
                 { key: "vizSide", label: "Placement", kind: "enum", fallback: "left",
                   options: ["left", "right", "both", "hidden"],
@@ -282,8 +280,8 @@ PopupWindow {
                   min: 6, max: 64, step: 2,
                   hint: "Fewer looks chunky, more looks fine. Used by bar-like styles." },
                 { key: "colorMode", label: "Color", kind: "colors", fallback: "theme",
-                  options: ["theme", "fade", "rainbow", "custom"],
-                  labels: { theme: "Theme", fade: "Fade", rainbow: "Rainbow", custom: "Custom" },
+                  options: Colors.keys,
+                  labels: Colors.labels,
                   hint: "Theme follows your bar." },
                 { key: "customColor", label: "Custom color", kind: "color", fallback: "#7aa2f7",
                   presets: ["#7aa2f7", "#bb9af7", "#7dcfff", "#9ece6a", "#e0af68", "#ff9e64", "#f7768e", "#c0caf5"],
@@ -516,7 +514,7 @@ PopupWindow {
     readonly property string previewStyle: String(root.val("vizStyle"))
     readonly property var previewLevels: (root.levels && root.levels.length > 0)
         ? root.levels
-        : (root.previewStyle === "scope" ? root.demoScope : root.demoSpectrum)
+        : (Visuals.isScope(root.previewStyle) ? root.demoScope : root.demoSpectrum)
 
     // ---- window geometry -------------------------------------------------------
     visible: false
@@ -711,8 +709,8 @@ PopupWindow {
 
                         Visualizer {
                             anchors.centerIn: parent
-                            width: (root.previewStyle === "ring" || root.previewStyle === "orb") ? 28 : parent.width - 32
-                            height: (root.previewStyle === "ring" || root.previewStyle === "orb") ? 28 : 26
+                            width: Visuals.isSquare(root.previewStyle) ? 28 : parent.width - 32
+                            height: Visuals.isSquare(root.previewStyle) ? 28 : 26
                             levels: root.previewLevels
                             vizStyle: root.previewStyle
                             colorMode: String(root.val("colorMode"))

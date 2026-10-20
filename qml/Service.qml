@@ -2,6 +2,7 @@ import QtQuick
 import Quickshell
 import Quickshell.Io
 import Quickshell.Services.Mpris
+import "js/Visuals.js" as Visuals
 
 // Shared brain of Omaudix. Reads the active MPRIS player
 // and runs ONE audio helper (viz.py) for every widget instance.
@@ -13,7 +14,7 @@ Item {
     property var manifest: null
 
     readonly property string pluginId: "io.github.qempexe.omaudix"
-    readonly property var styleNames: ["bars", "mirror", "wave", "scope", "dots", "led", "ring", "area", "peaks", "capsules", "steps", "neon", "lightning", "heartbeat", "ripple", "helix", "comet", "stellar", "meter", "orb"]
+    readonly property var styleNames: Visuals.keys
 
     // ---- media -----------------------------------------------------------
     // Third-party plugins cannot reach omarchy.media (the shell only hands that
@@ -277,7 +278,7 @@ Item {
     property int consumerCount: 0
     property var config: ({ style: "bars", bars: 20, fps: 30, gain: 100, smooth: 60, engine: "auto" })
 
-    readonly property string mode: config.style === "scope" ? "scope" : "spectrum"
+    readonly property string mode: Visuals.isScope(config.style) ? "scope" : "spectrum"
     readonly property int frameSize: mode === "scope" ? 64 : config.bars
     readonly property bool shouldRun: !shuttingDown && !fatal && consumerCount > 0 && playing
 
@@ -318,7 +319,7 @@ Item {
         }
         if (JSON.stringify(next) === JSON.stringify(config)) return
         var prev = config
-        var modeChanged = (next.style === "scope") !== (prev.style === "scope")
+        var modeChanged = Visuals.isScope(next.style) !== Visuals.isScope(prev.style)
         // The helper only cares about these. A pure style change (bars -> neon)
         // is drawn by the widget from the same data, so it needs no restart and
         // shows up on the very next frame.

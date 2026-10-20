@@ -45,37 +45,13 @@ class ManifestTests(unittest.TestCase):
                 continue
             # setting(...) may be wrapped by over(...) for popup overrides.
             m = re.search(
-                r'setting\("%s", [^)]+\)\s*\)*\s*,\s*(\[[^\]]*\]|styleChoices)' % s["key"],
+                r'setting\("%s", [^)]+\)\s*\)*\s*,\s*(\[[^\]]*\]|styleChoices|Colors\.keys)' % s["key"],
                 qml,
             )
             self.assertIsNotNone(m, s["key"])
-            if m.group(1) == "styleChoices":
-                m2 = re.search(r'styleChoices: (\[[^\]]*\])', qml)
-                opts = json.loads(m2.group(1))
-            else:
-                opts = json.loads(m.group(1))
-            self.assertEqual(opts, s["options"], s["key"])
-
-    def test_service_style_names_match(self):
-        svc = read("qml/Service.qml")
-        opts = json.loads(re.search(r'styleNames: (\[[^\]]*\])', svc).group(1))
-        style = next(s for s in self.bw["schema"] if s["key"] == "vizStyle")
-        self.assertEqual(opts, style["options"])
-
-    def style_options(self):
-        return next(s for s in self.bw["schema"] if s["key"] == "vizStyle")["options"]
-
-    def test_popup_style_list_and_labels_match_manifest(self):
-        popup = read("qml/panel/SettingsPopup.qml")
-        block = re.search(r'key: "vizStyle".*?hint:', popup, re.S).group(0)
-        opts = json.loads(re.search(r'options: (\[[^\]]*\])', block).group(1))
-        self.assertEqual(opts, self.style_options())
-        labels = re.search(r'labels: \{([^}]*)\}', block).group(1)
-        self.assertEqual(set(re.findall(r'(\w+): "', labels)), set(opts))
-
-    def test_visualizer_draws_every_style(self):
-        drawn = re.findall(r'case "([a-z]+)":', read("qml/bar/Visualizer.qml"))
-        self.assertEqual(sorted(drawn), sorted(self.style_options()))
+            if m.group(1) in ("styleChoices", "Colors.keys"):
+                continue          # the registries; tests/test_parts.js checks those
+            self.assertEqual(json.loads(m.group(1)), s["options"], s["key"])
 
     def test_every_text_item_is_plain_text(self):
         """MPRIS metadata is attacker-controlled: Text.AutoText would render
