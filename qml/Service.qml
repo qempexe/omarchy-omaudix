@@ -205,11 +205,15 @@ Item {
     readonly property string artist: player ? clean(player.trackArtist, "") : ""
     readonly property bool hasMedia: !!player && (title !== "" || artist !== "")
     readonly property bool playing: !!player && !!player.isPlaying
-    readonly property string albumArt: {
+    // The cover as the player gives it, and as it is shown: a small, clean copy made
+    // by ArtCache (see js/Art.js), never the player's file or address itself.
+    readonly property string artUrl: {
         if (!player || !player.trackArtUrl) return ""
         var url = String(player.trackArtUrl)
         return url.length > 2048 ? "" : url
     }
+    ArtCache { id: artCache; url: root.artUrl }
+    readonly property string albumArt: artCache.file
 
     // "auto" follows whatever is playing; otherwise the D-Bus name of the
     // player the user picked in the settings panel.
