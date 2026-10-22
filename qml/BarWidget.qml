@@ -585,7 +585,12 @@ BarWidget {
         z: -1
         renderTarget: Canvas.Image
         readonly property string url: root.cfg.colorMode === "cover" && root.albumArt !== "" ? root.albumArt : ""
+        // the cover being read; the one before it is let go, as the canvas would
+        // otherwise keep every cover it was ever handed
+        property string held: ""
         onUrlChanged: {
+            if (held !== "" && held !== url) unloadImage(held)
+            held = url
             if (url === "") return
             if (!isImageLoaded(url)) loadImage(url)
             requestPaint()

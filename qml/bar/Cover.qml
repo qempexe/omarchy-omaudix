@@ -4,6 +4,8 @@ import QtQuick
 // music plays, to the left or to the right, and stops where it is when it pauses.
 // Shows a music note while there is no cover; while a new cover loads it keeps a
 // quiet tinted tile instead of flashing the note.
+// Only a cover that is on screen holds its picture: a hidden one lets it go, and a
+// new song lets the old one go, so each cover keeps one small picture at most.
 Item {
     id: root
 
@@ -18,6 +20,7 @@ Item {
     readonly property bool round: shape === "circle"
     // only a real cover turns; the note that stands in for one stays upright
     readonly property bool spinning: round && spin !== "off" && source !== ""
+    readonly property string shown: visible ? source : ""
 
     // the turning part: the picture and its tile, never the item's own box
     Item {
@@ -35,10 +38,10 @@ Item {
             id: img
             anchors.fill: parent
             visible: !root.round && root.source !== "" && status === Image.Ready
-            source: root.round ? "" : root.source
+            source: root.round ? "" : root.shown
             fillMode: Image.PreserveAspectCrop
             asynchronous: true
-            cache: true
+            cache: false
             sourceSize.width: 128
             sourceSize.height: 128
         }
@@ -53,10 +56,14 @@ Item {
             onImageLoaded: requestPaint()
             onWidthChanged: requestPaint()
             onVisibleChanged: if (visible) requestPaint()
+            // the canvas keeps every picture it loads until told to let it go
             function take(url) {
-                if (url === "" || !root.round) return
-                if (!isImageLoaded(url)) loadImage(url)
-                loaded = url
+                const want = root.round ? url : ""
+                if (want !== loaded) {
+                    if (loaded !== "") unloadImage(loaded)
+                    loaded = want
+                    if (want !== "" && !isImageLoaded(want)) loadImage(want)
+                }
                 requestPaint()
             }
             onPaint: {
@@ -115,10 +122,10 @@ Item {
         turn.start()
     }
 
-    onSourceChanged: roundArt.take(source)
-    onRoundChanged: roundArt.take(source)
+    onShownChanged: roundArt.take(shown)
+    onRoundChanged: roundArt.take(shown)
     onSpinningChanged: Qt.callLater(applySpin)
     onSpinChanged: Qt.callLater(applySpin)
     onSpinTimeChanged: Qt.callLater(applySpin)
-    Component.onCompleted: { roundArt.take(source); applySpin() }
+    Component.onCompleted: { roundArt.take(shown); applySpin() }
 }
