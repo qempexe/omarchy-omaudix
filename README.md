@@ -20,7 +20,7 @@ omarchy plugin add https://github.com/qempexe/omarchy-omaudix.git --enable
 omarchy restart shell
 ```
 
-Then place it from the bar settings, or move it with `omarchy bar move io.github.qempexe.omaudix --section left` (or `center`, `right`). The settings panel opens from the gear on the widget, or a right click anywhere on it.
+Then place it from the bar settings, or move it with `omarchy bar move io.github.qempexe.omaudix --section left` (or `center`, `right`). The settings panel opens from the gear on the widget, or a right click anywhere on it. The gear can be hidden; the right click always works.
 
 It needs PipeWire (`pw-record`), Python 3, `curl` and `vipsthumbnail` (from libvips), which Omarchy already has. Covers are never shown straight from the player: each one is fetched with a size and time limit and made into a small, clean copy in a separate, limited process first. [cava](https://github.com/karlstav/cava) is used for the spectrum when it's installed; without it a built-in analyzer takes over at about 3% of one core. Pasting into the panel's text fields goes through `wl-paste`.
 
@@ -138,6 +138,7 @@ The main settings can also go straight into the widget's entry in `~/.config/oma
 | `showControls` | true, false | true |
 | `showPrevious`, `showPlayPause`, `showNext` | true, false | true |
 | `controlsSide` | left, right | right |
+| `showGear` | true, false (the settings button) | true |
 | `hideWhenPaused` | true, false | false |
 | `pauseOthers` | true, false | false |
 | `coverSide` | hidden, left, center, right | hidden |

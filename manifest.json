@@ -59,6 +59,7 @@
       "showPlayPause": true,
       "showNext": true,
       "controlsSide": "right",
+      "showGear": true,
       "hideWhenPaused": false,
       "pauseOthers": false,
       "coverSide": "hidden",
@@ -392,6 +393,13 @@
         ],
         "defaultValue": "right",
         "description": "Which end of the widget holds the buttons."
+      },
+      {
+        "key": "showGear",
+        "type": "boolean",
+        "label": "Show settings button",
+        "defaultValue": true,
+        "description": "The gear at the end of the widget. Without it, a right click on the widget still opens the settings."
       },
       {
         "key": "hideWhenPaused",

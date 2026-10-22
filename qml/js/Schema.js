@@ -284,7 +284,9 @@ var tabs = [
             { key: "controlsSide", label: "Buttons side", kind: "enum", fallback: "right",
               options: ["left", "right"], labels: lr(),
               hint: "Which end of the widget holds them.",
-              when: [{ key: "showControls", is: [true] }] }
+              when: [{ key: "showControls", is: [true] }] },
+            { key: "showGear", label: "Settings button", kind: "bool", fallback: true,
+              hint: "The gear at the end of the widget. Without it, a right click on the widget still opens these settings." }
         ] },
         { title: "Mouse", items: [
             { key: "clickAction", label: "Left click", kind: "enum", fallback: "playPause",

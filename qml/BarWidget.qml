@@ -449,7 +449,7 @@ BarWidget {
 
         Button {
             id: gearH
-            visible: true
+            visible: root.cfg.showGear
             iconText: "󰒓"
             foreground: root.fg
             fontFamily: root.fontName
@@ -524,13 +524,17 @@ BarWidget {
             MouseArea {
                 anchors.fill: parent
                 cursorShape: Qt.PointingHandCursor
-                onClicked: if (root.service) root.service.runAction("playPause")
+                acceptedButtons: Qt.LeftButton | Qt.RightButton
+                onClicked: function(mouse) {
+                    if (mouse.button === Qt.RightButton) settingsPopup.toggle()
+                    else if (root.service) root.service.runAction("playPause")
+                }
             }
         }
 
         Button {
             id: gearV
-            visible: true
+            visible: root.cfg.showGear
             iconText: "󰒓"
             foreground: root.fg
             fontFamily: root.fontName
