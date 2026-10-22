@@ -60,7 +60,7 @@
       "showNext": true,
       "controlsSide": "right",
       "showGear": true,
-      "hideWhenPaused": false,
+      "hideWhen": "stopped",
       "pauseOthers": false,
       "coverSide": "hidden",
       "coverSize": 16,
@@ -402,11 +402,16 @@
         "description": "The gear at the end of the widget. Without it, a right click on the widget still opens the settings."
       },
       {
-        "key": "hideWhenPaused",
-        "type": "boolean",
-        "label": "Hide when paused",
-        "defaultValue": false,
-        "description": "Remove the widget from the bar while nothing is playing. Off by default so the widget is always visible."
+        "key": "hideWhen",
+        "type": "enum",
+        "label": "Hide the widget",
+        "options": [
+          "never",
+          "stopped",
+          "paused"
+        ],
+        "defaultValue": "stopped",
+        "description": "stopped: off the bar while no player has a song, and a paused song keeps it there. paused: only on the bar while music plays. never: always on the bar."
       },
       {
         "key": "pauseOthers",

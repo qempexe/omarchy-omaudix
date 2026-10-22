@@ -205,6 +205,8 @@ Item {
     readonly property string artist: player ? clean(player.trackArtist, "") : ""
     readonly property bool hasMedia: !!player && (title !== "" || artist !== "")
     readonly property bool playing: !!player && !!player.isPlaying
+    // nothing to show: no song, or a player that has stopped (a paused song still counts)
+    readonly property bool stopped: !hasMedia || (!playing && player.playbackState === MprisPlaybackState.Stopped)
     // The cover as the player gives it, and as it is shown: a small, clean copy made
     // by ArtCache (see js/Art.js), never the player's file or address itself.
     readonly property string artUrl: {
@@ -703,6 +705,7 @@ Item {
             return JSON.stringify({
                 hasMedia: root.hasMedia,
                 playing: root.playing,
+                stopped: root.stopped,
                 title: root.title,
                 artist: root.artist,
                 albumArt: root.albumArt,

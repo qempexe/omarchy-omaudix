@@ -298,8 +298,10 @@ var tabs = [
               hint: "Volume changes the player's own volume, when it has one. Style changes are saved as you scroll." }
         ] },
         { title: "Showing", items: [
-            { key: "hideWhenPaused", label: "Hide when paused", kind: "bool", fallback: false,
-              hint: "Remove the widget from the bar while nothing plays." },
+            { key: "hideWhen", label: "Hide the widget", kind: "enum", fallback: "stopped",
+              options: ["never", "stopped", "paused"],
+              labels: { never: "Never", stopped: "When nothing plays", paused: "When paused too" },
+              hint: "When nothing plays: off the bar while no player has a song, and a paused song keeps it there. When paused too: only on the bar while music plays." },
             { key: "startLook", label: "Look at login", kind: "enum", fallback: "keep",
               options: ["keep", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12"],
               labels: { keep: "As I left it" },
@@ -358,9 +360,18 @@ function cleanValue(key, v) {
     }
 }
 
+// "Hide when paused" was a switch before 2.1.0; a choice made with it is kept
+function carryOver(values) {
+    if (!values || typeof values !== "object" || values.hideWhen != null || values.hideWhenPaused == null) return values;
+    const on = values.hideWhenPaused === true || values.hideWhenPaused === "true";
+    return Object.assign({}, values, { hideWhen: on ? "paused" : "never" });
+}
+
 // every setting, layered: defaults, then the shell's own widget settings, then what
 // was changed in the panel. Each value checked.
 function resolve(shellSettings, local) {
+    shellSettings = carryOver(shellSettings);
+    local = carryOver(local);
     const out = {};
     const keys = Object.keys(defaults());
     for (const k of keys) {

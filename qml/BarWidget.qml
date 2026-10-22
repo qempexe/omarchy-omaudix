@@ -17,6 +17,7 @@ BarWidget {
     readonly property var service: bar && bar.shell ? bar.shell.serviceFor(moduleName) : null
     readonly property bool hasMedia: service ? service.hasMedia : false
     readonly property bool playing: service ? service.playing : false
+    readonly property bool stopped: service ? service.stopped : true
 
     // ---- settings ---------------------------------------------------------------
     // Every setting, checked: the defaults, then this widget's entry in shell.json,
@@ -28,9 +29,21 @@ BarWidget {
 
     // ---- derived state -----------------------------------------------------
     readonly property string effStyle: service && service.styleOverride !== "" ? service.styleOverride : cfg.vizStyle
-    // Always on the bar by default (idle placeholder when nothing plays);
-    // "Hide when paused" is the opt-out.
-    readonly property bool shouldShow: cfg.hideWhenPaused ? (hasMedia && playing) : true
+    // On the bar while a song is playing or paused; "Hide the widget" can keep it
+    // there always, or only while music plays. It leaves a moment after the music
+    // does, so skipping a song or a player starting up doesn't make it blink.
+    readonly property bool wantShow: cfg.hideWhen === "never" ? true
+        : (cfg.hideWhen === "paused" ? hasMedia && playing : !stopped)
+    property bool shouldShow: wantShow
+    onWantShowChanged: {
+        if (wantShow) { hideLater.stop(); shouldShow = true }
+        else hideLater.restart()
+    }
+    Timer {
+        id: hideLater
+        interval: 1500
+        onTriggered: root.shouldShow = root.wantShow
+    }
     readonly property bool vizLeft: cfg.vizSide === "left" || cfg.vizSide === "both"
     readonly property bool vizRight: cfg.vizSide === "right" || cfg.vizSide === "both"
     readonly property real vizHeight: Style.space(18)
