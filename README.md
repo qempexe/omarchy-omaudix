@@ -66,6 +66,7 @@ The plate's line can be drawn in your active window border's own gradient, at th
 - **On the beat**: the cover swells and the plate brightens with the bass.
 - **New song**: the title can fade or slide in.
 - **Progress line** under the title, on hover or always. Click it to jump, when the player allows it.
+- **Buttons**: previous, play/pause and next can each be shown or left out, at either end of the widget.
 - **Mouse**: left click plays or pauses (or skips, or nothing), middle click skips, the wheel skips tracks, changes the player's volume, or steps through the visuals.
 - **Text**: artist and title in either order, or just one of them, with your own separator. Long titles scroll left, right, bounce, or are cut short; short ones shrink the widget.
 
@@ -135,6 +136,7 @@ The main settings can also go straight into the widget's entry in `~/.config/oma
 | `scrollPause` | 0 to 5000 (ms) | 1500 |
 | `textAlign` | left, center, right | left |
 | `showControls` | true, false | true |
+| `showPrevious`, `showPlayPause`, `showNext` | true, false | true |
 | `controlsSide` | left, right | right |
 | `hideWhenPaused` | true, false | false |
 | `pauseOthers` | true, false | false |

@@ -55,6 +55,9 @@
       "scrollPause": 1500,
       "textAlign": "left",
       "showControls": true,
+      "showPrevious": true,
+      "showPlayPause": true,
+      "showNext": true,
       "controlsSide": "right",
       "hideWhenPaused": false,
       "pauseOthers": false,
@@ -357,6 +360,27 @@
         "label": "Show playback controls",
         "defaultValue": true,
         "description": "Previous, play/pause and next buttons."
+      },
+      {
+        "key": "showPrevious",
+        "type": "boolean",
+        "label": "Show previous button",
+        "defaultValue": true,
+        "description": "The button that goes back a song."
+      },
+      {
+        "key": "showPlayPause",
+        "type": "boolean",
+        "label": "Show play/pause button",
+        "defaultValue": true,
+        "description": "The button that plays and pauses. On a side bar it is the only button."
+      },
+      {
+        "key": "showNext",
+        "type": "boolean",
+        "label": "Show next button",
+        "defaultValue": true,
+        "description": "The button that skips to the next song."
       },
       {
         "key": "controlsSide",

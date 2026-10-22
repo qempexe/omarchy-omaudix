@@ -7,6 +7,9 @@ Row {
 
     property var bar: null
     property var service: null
+    property bool showPrevious: true
+    property bool showPlayPause: true
+    property bool showNext: true
 
     spacing: Style.space(3)
 
@@ -29,6 +32,7 @@ Row {
 
     Button {
         id: prevBtn
+        visible: root.showPrevious
         enabled: root.can("previous")
         opacity: enabled ? 1 : 0.35
         iconText: "\uDB81\uDCAE"
@@ -46,6 +50,7 @@ Row {
 
     Button {
         id: playBtn
+        visible: root.showPlayPause
         enabled: root.can("playPause")
         opacity: enabled ? 1 : 0.35
         iconText: root.playing ? "\uDB80\uDFE4" : "\uDB81\uDC0A"
@@ -63,6 +68,7 @@ Row {
 
     Button {
         id: nextBtn
+        visible: root.showNext
         enabled: root.can("next")
         opacity: enabled ? 1 : 0.35
         iconText: "\uDB81\uDCAD"

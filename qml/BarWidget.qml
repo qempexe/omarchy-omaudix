@@ -255,6 +255,9 @@ BarWidget {
             visible: root.cfg.showControls && root.cfg.controlsSide === "left"
             bar: root.bar
             service: root.service
+            showPrevious: root.cfg.showPrevious
+            showPlayPause: root.cfg.showPlayPause
+            showNext: root.cfg.showNext
             anchors.verticalCenter: parent.verticalCenter
         }
 
@@ -438,6 +441,9 @@ BarWidget {
             visible: root.cfg.showControls && root.cfg.controlsSide === "right"
             bar: root.bar
             service: root.service
+            showPrevious: root.cfg.showPrevious
+            showPlayPause: root.cfg.showPlayPause
+            showNext: root.cfg.showNext
             anchors.verticalCenter: parent.verticalCenter
         }
 
@@ -480,7 +486,7 @@ BarWidget {
         }
 
         Button {
-            visible: root.cfg.showControls
+            visible: root.cfg.showControls && root.cfg.showPlayPause
             iconText: root.playing ? "󰏤" : "󰐊"
             foreground: root.fg
             fontFamily: root.fontName
