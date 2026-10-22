@@ -182,11 +182,11 @@ test("ready made looks only set look keys, all valid, and are told apart", () =>
 });
 
 test("imported looks keep only look keys", () => {
-    const L = Schema.cleanLook({ vizStyle: "neon", player: "evil", hideWhenPaused: true, vizWidth: 1e9 });
+    const L = Schema.cleanLook({ vizStyle: "neon", player: "evil", hideWhen: "paused", vizWidth: 1e9 });
     assert.strictEqual(L.vizStyle, "neon");
     assert.strictEqual(L.vizWidth, 240);
     assert.strictEqual(L.player, undefined);
-    assert.strictEqual(L.hideWhenPaused, undefined);
+    assert.strictEqual(L.hideWhen, undefined);
     assert.strictEqual(Schema.cleanLook("x"), null);
     assert.strictEqual(Schema.cleanLook({ nothing: 1 }), null);
 });
@@ -275,6 +275,28 @@ test("window border lines take the border's colors and angle", () => {
     assert.strictEqual(p.lineAngle, 45);
     const q = Style.params(Object.assign(Schema.defaults(), { plate: true, border: "window" }), Object.assign({}, pal, { border: [] }), 200, 30, 4, "top");
     assert.strictEqual(q.lineGrad.length, 0, "no border colors: a plain line");
+});
+
+test("the buttons and the gear can each be left out, all shown by default", () => {
+    const d = Schema.resolve({}, {});
+    for (const k of ["showControls", "showPrevious", "showPlayPause", "showNext", "showGear"]) assert.strictEqual(d[k], true, k);
+    const r = Schema.resolve({ showNext: false }, { showGear: "false", showPrevious: "nope" });
+    assert.strictEqual(r.showNext, false);
+    assert.strictEqual(r.showGear, false);
+    assert.strictEqual(r.showPrevious, true);
+    for (const k of ["showPrevious", "showPlayPause", "showNext"])
+        assert.ok(!Schema.active(Schema.byKey[k], Object.assign(d, { showControls: false })), k + " is dimmed without buttons");
+});
+
+test("the widget hides when nothing plays, and the old switch is carried over", () => {
+    assert.strictEqual(Schema.resolve({}, {}).hideWhen, "stopped");
+    assert.strictEqual(Schema.resolve({}, { hideWhen: "paused" }).hideWhen, "paused");
+    assert.strictEqual(Schema.resolve({}, { hideWhen: "sometimes" }).hideWhen, "stopped");
+    assert.strictEqual(Schema.resolve({ hideWhenPaused: true }, {}).hideWhen, "paused");
+    assert.strictEqual(Schema.resolve({}, { hideWhenPaused: false }).hideWhen, "never");
+    assert.strictEqual(Schema.resolve({ hideWhenPaused: true }, { hideWhen: "stopped" }).hideWhen, "stopped", "the panel wins");
+    assert.strictEqual(Schema.resolve({ hideWhen: "never", hideWhenPaused: true }, {}).hideWhen, "never", "the new key wins");
+    assert.strictEqual(JSON.stringify(schemaOf("hideWhen").options), JSON.stringify(Schema.byKey.hideWhen.options));
 });
 
 console.log(passed + " passed");
