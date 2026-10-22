@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "io.github.qempexe.omaudix",
   "name": "Omaudix",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "author": "qempexe",
   "license": "MIT",
   "description": "Now-playing bar widget: 24 live visualizers in 11 color modes, a styled plate behind it, round spinning covers, saved looks, and a settings panel that follows your theme.",
