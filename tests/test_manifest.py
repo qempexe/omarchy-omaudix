@@ -48,5 +48,18 @@ class ManifestTests(unittest.TestCase):
                                 "%s:%d Text without textFormat: Text.PlainText" % (name, i + 1))
 
 
+    def test_every_canvas_that_loads_a_picture_lets_it_go(self):
+        """A Canvas keeps each picture it loads until unloadImage(): covers change with
+        every song, so a file that loads one must also unload the one before."""
+        for d, _, fs in os.walk(os.path.join(ROOT, "qml")):
+            for f in fs:
+                if not f.endswith(".qml"):
+                    continue
+                name = os.path.relpath(os.path.join(d, f), ROOT)
+                text = read(name)
+                if "loadImage(" in text.replace("unloadImage(", ""):
+                    self.assertIn("unloadImage(", text, name)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
